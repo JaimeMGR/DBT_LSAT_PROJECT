@@ -1,0 +1,63 @@
+# ============================================================================
+# _intermediate__models.yml
+# ============================================================================
+# Documentación + tests de los modelos intermedios.
+#
+# Los modelos intermedios típicamente NO se exponen al usuario final, pero
+# sí los testamos para asegurar que la lógica que comparten múltiples marts
+# es correcta.
+# ============================================================================
+
+version: 2
+
+models:
+
+  - name: int_orders__enriched
+    description: >
+      Pedidos enriquecidos con address y promo. Modelo intermedio reutilizable
+      por múltiples marts (fct_orders, fct_user_purchases, ...).
+    columns:
+      - name: order_id
+        description: PK del pedido.
+        data_tests:
+          - unique
+          - not_null
+      - name: user_id
+        description: FK al usuario.
+        data_tests:
+          - not_null
+      - name: discount_usd
+        description: >
+          Descuento aplicado en USD. 0 si el pedido no usó código promocional.
+        data_tests:
+          - not_null
+      - name: days_to_deliver
+        description: >
+          Días desde la creación del pedido hasta la entrega. NULL si pendiente.
+
+  - name: int_events__aggregated_by_user
+    description: >
+      Eventos agregados por usuario y sesión. Cuenta de eventos por tipo y
+      duración de la sesión. Base para los marts de Producto y Marketing.
+    columns:
+      - name: user_id
+        description: FK al usuario.
+        data_tests:
+          - not_null
+      - name: session_id
+        description: ID de la sesión.
+        data_tests:
+          - not_null
+      - name: session_start_at_utc
+        description: Timestamp UTC del primer evento de la sesión.
+      - name: session_end_at_utc
+        description: Timestamp UTC del último evento de la sesión.
+      - name: session_duration_seconds
+        description: Duración de la sesión en segundos.
+    # Test compuesto: la combinación user_id + session_id debe ser única
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments: 
+            combination_of_columns:
+              - user_id
+              - session_id

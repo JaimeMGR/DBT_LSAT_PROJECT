@@ -1,0 +1,7 @@
+email,is_valid_email_address
+ana.garcia@example.com,true
+juan@valid.es,true
+no-es-un-email,false
+otro_invalido@,false
+con espacios @example.com,false
+ok-with-dashes@my-domain.io,true
