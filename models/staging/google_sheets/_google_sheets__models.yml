@@ -1,0 +1,40 @@
+# ============================================================================
+# _google_sheets__models.yml
+# ============================================================================
+# Documentación + tests sobre los modelos staging de google_sheets.
+# ============================================================================
+
+version: 2
+
+models:
+
+  - name: stg_google_sheets__budget
+    description: >
+      Staging del presupuesto mensual por producto. Renombrado y casteado.
+    columns:
+      - name: budget_id
+        description: ID interno (corresponde a la columna _row del Sheet).
+        data_tests:
+          - unique
+          - not_null
+      - name: product_id
+        description: FK al producto presupuestado.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_sql_server_dbo__products')
+                field: product_id
+      - name: quantity_budgeted
+        description: Cantidad presupuestada de unidades.
+        data_tests:
+          - not_null
+          - positive_values
+      - name: budget_month
+        description: Mes al que aplica el presupuesto.
+        data_tests:
+          - not_null
+      - name: date_load
+        description: Timestamp de la última sincronización.
+        data_tests:
+          - not_null

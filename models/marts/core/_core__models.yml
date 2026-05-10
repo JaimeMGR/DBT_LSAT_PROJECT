@@ -1,0 +1,376 @@
+# ============================================================================
+# _core__models.yml — Modelos centrales (Gold core)
+# ============================================================================
+# Este YAML demuestra:
+#   - Tests genéricos (unique, not_null, accepted_values, relationships)
+#   - Tests cross-column con dbt_utils
+#   - Documentación en línea y con bloques (doc())
+#   - Data contracts en dim_users (fuerza tipos y not_null)
+#   - Unit tests para validar la lógica del modelo
+# ============================================================================
+
+version: 2
+
+models:
+
+  # --------------------------------------------------------------------------
+  # dim_users — CON DATA CONTRACT
+  # --------------------------------------------------------------------------
+  # El contract obliga a que la estructura del modelo (columnas + tipos)
+  # cumpla exactamente lo declarado. Si en el SQL cambia un tipo o desaparece
+  # una columna, dbt FALLA en build → previene cambios accidentales que
+  # rompan downstream.
+  # --------------------------------------------------------------------------
+  - name: dim_users
+    description: >
+      Dimensión de usuarios. Fuente de verdad para toda la organización.
+      Incluye validación de email y enriquecimiento con la dirección por defecto.
+
+    config:
+      contract:
+        enforced: true
+
+    columns:
+      - name: user_id
+        description: "PK del usuario."
+        data_type: varchar
+        constraints:
+          - type: not_null
+        data_tests:
+          - unique
+          - not_null
+
+      - name: first_name
+        description: "Nombre."
+        data_type: varchar
+
+      - name: last_name
+        description: "Apellido."
+        data_type: varchar
+
+      - name: full_name
+        description: "Concatenación de nombre y apellido."
+        data_type: varchar
+
+      - name: email
+        description: "Email del usuario."
+        data_type: varchar
+        constraints:
+          - type: not_null
+
+      - name: is_valid_email_address
+        description: >
+          TRUE si el email cumple el formato estándar (regex).
+          Útil para campañas de marketing — solo a usuarios con email válido.
+        data_type: boolean
+        constraints:
+          - type: not_null
+
+      - name: phone_number
+        description: "Teléfono (puede ser nulo)."
+        data_type: varchar
+
+      - name: address_id
+        description: "FK al address por defecto."
+        data_type: varchar
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_addresses')
+                field: address_id
+
+      - name: address_line
+        description: "Línea principal del address por defecto (denormalizado)."
+        data_type: varchar
+
+      - name: zipcode
+        description: "Código postal."
+        data_type: varchar(20)
+
+      - name: state
+        description: "Estado."
+        data_type: varchar
+
+      - name: country
+        description: "País."
+        data_type: varchar
+
+      - name: registered_at_utc
+        description: "Timestamp UTC del alta."
+        data_type: timestamp_tz
+        constraints:
+          - type: not_null
+
+      - name: last_updated_at_utc
+        description: "Timestamp UTC de la última modificación."
+        data_type: timestamp_tz
+
+      - name: days_since_registration
+        description: "Días transcurridos desde el alta hasta hoy."
+        data_type: number
+
+      - name: date_load
+        description: "Timestamp de la última sincronización del source."
+        data_type: timestamp_tz
+        constraints:
+          - type: not_null
+
+  # --------------------------------------------------------------------------
+  # dim_products
+  # --------------------------------------------------------------------------
+  - name: dim_products
+    description: "Dimensión de productos del catálogo."
+    columns:
+      - name: product_id
+        description: "PK del producto."
+        data_tests:
+          - unique
+          - not_null
+      - name: product_name
+        description: "Nombre del producto."
+        data_tests:
+          - not_null
+      - name: unit_price_usd
+        description: "Precio unitario actual en USD."
+        data_tests:
+          - not_null
+          - positive_values
+      - name: inventory_units
+        description: "Unidades en stock."
+        data_tests:
+          - not_null
+      - name: stock_status
+        #description: '{{ doc("st_stock_status") }}'
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['out_of_stock', 'low_stock', 'in_stock']
+
+  # --------------------------------------------------------------------------
+  # dim_addresses
+  # --------------------------------------------------------------------------
+  - name: dim_addresses
+    description: "Dimensión de direcciones."
+    columns:
+      - name: address_id
+        description: "PK del address."
+        data_tests:
+          - unique
+          - not_null
+
+  # --------------------------------------------------------------------------
+  # dim_dates
+  # --------------------------------------------------------------------------
+  - name: dim_dates
+    description: >
+      Dimensión de tiempo. Una fila por día de 2020 a 2030 con todos los
+      componentes (año, mes, semana, trimestre, día de la semana, fin de
+      semana, ...).
+    columns:
+      - name: date
+        description: "Fecha (PK)."
+        data_tests:
+          - unique
+          - not_null
+      - name: date_id
+        description: "ID numérico de la fecha (YYYYMMDD)."
+        data_tests:
+          - unique
+          - not_null
+      - name: year
+        description: "Año."
+      - name: month
+        description: "Mes (1-12)."
+      - name: month_name
+        description: "Nombre del mes."
+      - name: quarter
+        description: "Trimestre (1-4)."
+      - name: week_of_year
+        description: "Semana ISO del año."
+      - name: week_day
+        description: "Nombre del día de la semana."
+      - name: is_weekend
+        description: "TRUE si es sábado o domingo."
+
+  # --------------------------------------------------------------------------
+  # fct_orders
+  # --------------------------------------------------------------------------
+  - name: fct_orders
+    description: >
+      Tabla de hechos de pedidos. Granularidad: una fila por pedido.
+      Métricas: ingreso bruto, descuentos, coste de envío, días hasta entrega.
+    columns:
+      - name: order_id
+        description: "PK del pedido."
+        data_tests:
+          - unique
+          - not_null
+      - name: user_id
+        description: "FK a dim_users."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_users')
+                field: user_id
+      - name: address_id
+        description: "FK a dim_addresses."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_addresses')
+                field: address_id
+      - name: status_order
+        #description: '{{ doc("or_order_status") }}'
+        data_tests:
+          - not_null
+      - name: total_order_cost_usd
+        description: Coste total del pedido (productos + envío).
+        data_tests:
+          - not_null
+      - name: net_order_cost_usd
+        description: Coste neto (total - descuento).
+      - name: days_to_deliver
+        description: Días desde la creación hasta la entrega.
+
+  # --------------------------------------------------------------------------
+  # fct_order_items
+  # --------------------------------------------------------------------------
+  - name: fct_order_items
+    description: >
+      Tabla de hechos a nivel de línea de pedido. Granularidad fina:
+      una fila por (order_id, product_id).
+    columns:
+      - name: order_item_id
+        description: Surrogate key MD5(order_id, product_id).
+        data_tests:
+          - unique
+          - not_null
+      - name: order_id
+        description: FK a fct_orders.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('fct_orders')
+                field: order_id
+      - name: product_id
+        description: FK a dim_products.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:  
+                to: ref('dim_products')
+                field: product_id
+      - name: user_id
+        description: FK a dim_users (denormalizado).
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_users')
+                field: user_id
+      - name: quantity_units
+        description: Unidades del producto en el pedido.
+        data_tests:
+          - not_null
+          - positive_values
+      - name: line_total_usd
+        description: quantity_units * unit_price_usd.
+        data_tests:
+          - not_null
+
+  # --------------------------------------------------------------------------
+  # fct_events
+  # --------------------------------------------------------------------------
+  - name: fct_events
+    description: >
+      Tabla de hechos de eventos de navegación. Granularidad: una fila por
+      evento. Base para análisis de comportamiento del usuario.
+    columns:
+      - name: event_id
+        description: PK del evento.
+        data_tests:
+          - unique
+          - not_null
+      - name: session_id
+        description: ID de la sesión.
+        data_tests:
+          - not_null
+      - name: user_id
+        description: FK a dim_users.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_users')
+                field: user_id
+      - name: product_id
+        description: FK a dim_products (puede ser NULL).
+      - name: order_id
+        description: FK a fct_orders (puede ser NULL).
+      - name: event_type
+        #description: '{{ doc("ev_event_type") }}'
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['page_view', 'add_to_cart', 'checkout', 'package_shipped']
+
+# ============================================================================
+# UNIT TESTS — Validan lógica con datos sintéticos
+# ============================================================================
+
+unit_tests:
+
+  - name: test_dim_users_email_validation
+    description: >
+      Valida que la regex de email categoriza correctamente direcciones
+      válidas e inválidas en dim_users.
+    model: dim_users
+    given:
+      - input: ref('stg_sql_server_dbo__users')
+        rows:
+          - {user_id: 'u1', first_name: 'Ana',  last_name: 'García',
+             email: 'ana@example.com',     phone_number: null, address_id: 'a1',
+             created_at_utc: '2024-01-01', updated_at_utc: '2024-01-01',
+             date_load: '2024-01-01'}
+          - {user_id: 'u2', first_name: 'Luis', last_name: 'Pérez',
+             email: 'luis@valid.es',       phone_number: null, address_id: 'a1',
+             created_at_utc: '2024-01-02', updated_at_utc: '2024-01-02',
+             date_load: '2024-01-02'}
+          - {user_id: 'u3', first_name: 'Fail', last_name: 'Email',
+             email: 'no-es-un-email',      phone_number: null, address_id: 'a1',
+             created_at_utc: '2024-01-03', updated_at_utc: '2024-01-03',
+             date_load: '2024-01-03'}
+      - input: ref('stg_sql_server_dbo__addresses')
+        rows:
+          - {address_id: 'a1', address_line: 'C/ Mayor 1', zipcode: '04001',
+             state: 'Almería', country: 'Spain', date_load: '2024-01-01'}
+    expect:
+      rows:
+        - {user_id: 'u1', email: 'ana@example.com',  is_valid_email_address: true}
+        - {user_id: 'u2', email: 'luis@valid.es',    is_valid_email_address: true}
+        - {user_id: 'u3', email: 'no-es-un-email',   is_valid_email_address: false}
+
+  - name: test_dim_products_stock_status_categorization
+    description: >
+      Valida la lógica de categorización del stock_status en dim_products.
+    model: dim_products
+    given:
+      - input: ref('stg_sql_server_dbo__products')
+        rows:
+          - {product_id: 'p1', product_name: 'Out of stock product',
+             unit_price_usd: 10.0, inventory_units: 0,
+             date_load: '2024-01-01'}
+          - {product_id: 'p2', product_name: 'Low stock product',
+             unit_price_usd: 20.0, inventory_units: 5,
+             date_load: '2024-01-01'}
+          - {product_id: 'p3', product_name: 'Healthy stock product',
+             unit_price_usd: 30.0, inventory_units: 100,
+             date_load: '2024-01-01'}
+    expect:
+      rows:
+        - {product_id: 'p1', stock_status: 'out_of_stock'}
+        - {product_id: 'p2', stock_status: 'low_stock'}
+        - {product_id: 'p3', stock_status: 'in_stock'}

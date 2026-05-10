@@ -1,0 +1,68 @@
+# ============================================================================
+# _snapshots.yml — Documentación + tests sobre los snapshots
+# ============================================================================
+# Sí: a los snapshots también se les pueden añadir tests. Especialmente útil
+# para validar la integridad del historial (que dbt_valid_from < dbt_valid_to,
+# que solo hay una versión "vigente" por unique_key, etc.).
+# ============================================================================
+
+version: 2
+
+snapshots:
+
+  - name: budget_snapshot_timestamp
+    description: >
+      Snapshot del presupuesto con estrategia timestamp. Captura cambios en
+      cualquier columna usando _fivetran_synced como timestamp de modificación.
+    columns:
+      - name: _row
+        description: PK del registro origen.
+      - name: dbt_scd_id
+        description: ID técnico único de cada versión (generado por dbt).
+        data_tests:
+          - unique
+          - not_null
+      - name: dbt_valid_from
+        description: Timestamp desde el que esta versión es válida.
+        data_tests:
+          - not_null
+
+  - name: budget_snapshot_check
+    description: >
+      Snapshot del presupuesto con estrategia check. Compara las columnas
+      [quantity, month, product_id]; si cambian, crea una nueva versión.
+    columns:
+      - name: dbt_scd_id
+        data_tests:
+          - unique
+          - not_null
+
+  - name: budget_snapshot_hard_deletes
+    description: >
+      Snapshot del presupuesto con detección de borrados (hard_deletes=new_record).
+      Si un registro se borra del origen, añade una fila con dbt_is_deleted=TRUE.
+    columns:
+      - name: dbt_scd_id
+        data_tests:
+          - unique
+          - not_null
+      - name: dbt_is_deleted
+        description: TRUE si esta fila representa un borrado físico del origen.
+
+  - name: users_snapshot_timestamp
+    description: >
+      Snapshot histórico de usuarios. Permite auditar cambios en email,
+      teléfono y dirección. Útil para GDPR e incidencias.
+    columns:
+      - name: user_id
+        description: PK del usuario.
+        data_tests:
+          - not_null
+      - name: dbt_scd_id
+        data_tests:
+          - unique
+          - not_null
+      - name: dbt_valid_from
+        description: Timestamp desde el que esta versión es válida.
+        data_tests:
+          - not_null

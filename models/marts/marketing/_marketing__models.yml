@@ -1,0 +1,69 @@
+# ============================================================================
+# _marketing__models.yml — Mart del equipo de Marketing
+# ============================================================================
+
+version: 2
+
+models:
+
+  - name: fct_user_purchases
+    description: >
+      Tabla de hechos a nivel de usuario con todas las métricas agregadas de
+      compras: número de pedidos, total gastado, descuentos, productos
+      comprados, etc. Incluye un campo `purchase_segment` para segmentación
+      directa en campañas de marketing.
+    columns:
+      - name: user_id
+        description: PK del usuario.
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments: 
+                to: ref('dim_users')
+                field: user_id
+
+      - name: email
+        description: Email del usuario.
+        data_tests:
+          - not_null
+
+      - name: is_valid_email_address
+        description: Útil para filtrar destinatarios en campañas de email.
+        data_tests:
+          - not_null
+
+      - name: total_orders
+        description: Número total de pedidos del usuario. 0 si nunca compró.
+        data_tests:
+          - not_null
+
+      - name: total_spent_usd
+        description: Total gastado en USD (incluye envío, antes de descuentos).
+        data_tests:
+          - not_null
+
+      - name: total_net_spent_usd
+        description: Total gastado neto (descuento aplicado).
+        data_tests:
+          - not_null
+
+      - name: total_products_bought
+        description: Suma de unidades de producto compradas.
+        data_tests:
+          - not_null
+
+      - name: total_distinct_products
+        description: Número de productos distintos comprados (cardinalidad).
+        data_tests:
+          - not_null
+
+      - name: purchase_segment
+        description: >
+          Segmentación derivada para campañas:
+          'never_bought', 'one_purchase', 'two_purchases', 'three_or_more'.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments: 
+                values: ['never_bought', 'one_purchase', 'two_purchases', 'three_or_more']

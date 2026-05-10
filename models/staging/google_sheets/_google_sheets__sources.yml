@@ -1,0 +1,97 @@
+# ============================================================================
+# _google_sheets__sources.yml — Definición del source `google_sheets`
+# ============================================================================
+# Convención de nombres: _<schema_source>__sources.yml
+#
+# Aquí declaramos:
+#   - El nombre lógico del source (cómo lo referenciaremos en los modelos)
+#   - La base de datos y schema físicos donde residen los datos crudos
+#   - Comportamiento de quoting (en Snowflake, false por defecto)
+#   - Reglas de freshness para detectar datos obsoletos
+#   - Tablas con sus columnas, descripciones y tests
+#
+# Para invocar este source desde un modelo:
+#   {{ source('google_sheets', 'budget') }}
+# ============================================================================
+
+version: 2
+
+sources:
+
+  - name: google_sheets
+    description: >
+      Datos en bruto procedentes de Google Sheets. Contiene tablas de soporte
+      operativo cargadas manualmente o por integraciones ligeras (Fivetran).
+    schema: google_sheets
+    # `env_var` permite que el source apunte a la BD correcta según el entorno
+    # (DEV, PRO, ...). El segundo argumento ('FAIL') es el valor por defecto
+    # si la variable no existe — así detectamos errores de configuración rápido.
+    database: "SERGIOEGUI_{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_BRONZE_DB"
+
+    # Snowflake no necesita quoting; lo desactivamos explícitamente para
+    # evitar problemas con identificadores que mezclan mayúsculas/minúsculas.
+    quoting:
+      database: false
+      schema: false
+      identifier: false
+
+    # ------------------------------------------------------------------------
+    # Freshness — Detectar datos obsoletos
+    # ------------------------------------------------------------------------
+    # Comando: dbt source freshness
+    #   warn_after: si el dato más reciente tiene MÁS de 24h => warning
+    #   error_after: si el dato más reciente tiene MÁS de 48h => error
+    # ------------------------------------------------------------------------
+    
+    config:
+      freshness:
+        warn_after:  {count: 24, period: hour}
+        error_after: {count: 48, period: hour}
+
+    tables:
+
+      # ----------------------------------------------------------------------
+      # budget — Presupuesto mensual por producto
+      # ----------------------------------------------------------------------
+      - name: budget
+        description: >
+          Presupuesto mensual previsto por producto, mantenido por el equipo
+          de Finanzas en una hoja de Google Sheets.
+        # Campo que dbt usará para calcular freshness sobre esta tabla.
+        config: 
+          loaded_at_field: _fivetran_synced
+
+        columns:
+          - name: _row
+            description: Identificador de fila auto-generado por Google Sheets.
+            data_tests:
+              - unique
+              - not_null
+
+          - name: product_id
+            description: UUID del producto. FK hacia sql_server_dbo.products.
+            data_tests:
+              - not_null
+              # Ejemplo de test relacional cross-source
+              #Añado este comentario
+              - relationships:
+                  arguments:
+                    to: source('sql_server_dbo', 'products')
+                    field: product_id
+
+          - name: quantity
+            description: Cantidad presupuestada para ese producto y mes.
+            data_tests:
+              - not_null
+              # Test custom definido en /macros/positive_values.sql
+              - positive_values
+
+          - name: month
+            description: Mes al que aplica el presupuesto (último día del mes).
+            data_tests:
+              - not_null
+
+          - name: _fivetran_synced
+            description: Timestamp de la última sincronización por Fivetran.
+            data_tests:
+              - not_null

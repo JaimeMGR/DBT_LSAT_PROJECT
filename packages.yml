@@ -1,0 +1,21 @@
+# ============================================================================
+# packages.yml — Dependencias de paquetes externos del proyecto
+# ============================================================================
+# Tras modificar este fichero, ejecutar:
+#   dbt deps
+#
+# Esto descargará los paquetes en /dbt_packages y los hará accesibles desde
+# nuestros modelos (refs, macros, tests).
+#
+# A partir de dbt 1.6 se puede usar `dependencies.yml` en lugar de este
+# archivo, pero packages.yml sigue funcionando perfectamente.
+# ============================================================================
+
+packages:
+  # --------------------------------------------------------------------------
+  # dbt_utils — El paquete imprescindible. Tests genéricos extra y macros
+  # muy útiles (date_spine, surrogate_key, group_by N, star, ...).
+  # https://hub.getdbt.com/dbt-labs/dbt_utils/latest/
+  # --------------------------------------------------------------------------
+  - package: dbt-labs/dbt_utils
+    version: [">=1.3.3", "<2.0.0"]

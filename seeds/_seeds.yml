@@ -1,0 +1,51 @@
+# ============================================================================
+# _seeds.yml — Documentación y tests sobre los seeds
+# ============================================================================
+# Los seeds son CSVs que dbt carga como tablas en el DW. Útil para:
+#   - Tablas de mapeo / lookup (códigos de país, mapeos de status, ...)
+#   - Listas de referencia que no vienen de un sistema (lista de
+#     departamentos, jerarquías de productos, ...)
+#   - Datos de prueba durante el desarrollo
+#
+# ⚠️ NO usar seeds para cargas masivas de datos. Para eso usad herramientas
+# de ingesta (Fivetran, Airbyte, dlt, ...). Los seeds están pensados para
+# CSVs pequeños (< unos miles de filas).
+#
+# COMANDO:
+#   dbt seed                           # Carga todos los seeds
+#   dbt seed --select country_codes    # Carga solo el indicado
+#   dbt seed --full-refresh            # Recrea las tablas desde cero
+# ============================================================================
+
+version: 2
+
+seeds:
+
+  - name: country_codes
+    description: >
+      Tabla de mapeo de códigos ISO de país a su nombre y continente.
+      Usada para enriquecer datos geográficos en los marts.
+    columns:
+      - name: country_code
+        description: Código ISO 3166-1 alpha-2 del país.
+        data_tests:
+          - unique
+          - not_null
+      - name: country_name
+        description: Nombre del país en inglés.
+        data_tests:
+          - unique
+          - not_null
+      - name: continent
+        description: Continente al que pertenece el país.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments: 
+                values:
+                  - Europe
+                  - North America
+                  - South America
+                  - Asia
+                  - Oceania
+                  - Africa
