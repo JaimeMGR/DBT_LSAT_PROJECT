@@ -1,0 +1,303 @@
+# ============================================================================
+# _sql_server_dbo__models.yml
+# ============================================================================
+# Documentación + tests sobre los modelos staging de sql_server_dbo.
+#
+# Convención: lo que documentamos en sources son los datos crudos; aquí
+# documentamos las transformaciones y los nuevos nombres de columnas.
+#
+# Comando para ejecutar todos los tests de este grupo:
+#   dbt test --select staging.sql_server_dbo
+# ============================================================================
+
+version: 2
+
+models:
+
+  # --------------------------------------------------------------------------
+  # stg_sql_server_dbo__users
+  # --------------------------------------------------------------------------
+  - name: stg_sql_server_dbo__users
+    description: >
+      Staging de usuarios. Renombrado, casteado y filtrado de soft-deletes.
+    columns:
+      - name: user_id
+        description: UUID del usuario (PK).
+        data_tests:
+          - unique
+          - not_null
+      - name: first_name
+        description: Nombre del usuario.
+      - name: last_name
+        description: Apellido del usuario.
+      - name: email
+        description: Email del usuario.
+        data_tests:
+          - not_null
+      - name: phone_number
+        description: Teléfono del usuario (puede ser nulo).
+      - name: address_id
+        description: FK al address por defecto.
+        data_tests:
+          - relationships:
+              arguments: 
+                to: ref('stg_sql_server_dbo__addresses')
+                field: address_id
+      - name: created_at_utc
+        description: Timestamp UTC del alta del usuario.
+        data_tests:
+          - not_null
+      - name: updated_at_utc
+        description: Timestamp UTC de la última modificación.
+      - name: date_load
+        description: Timestamp de la última sincronización de Fivetran.
+        data_tests:
+          - not_null
+
+  # --------------------------------------------------------------------------
+  # stg_sql_server_dbo__orders
+  # --------------------------------------------------------------------------
+  - name: stg_sql_server_dbo__orders
+    description: Staging de pedidos.
+    columns:
+      - name: order_id
+        description: UUID del pedido (PK).
+        data_tests:
+          - unique
+          - not_null
+      - name: user_id
+        description: FK al usuario que realizó el pedido.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: 
+                to: ref('stg_sql_server_dbo__users')
+                field: user_id
+      - name: address_id
+        description: FK al address de envío.
+      - name: promo_id
+        description: FK al código promocional (puede ser nulo).
+      - name: created_at_utc
+        description: Timestamp UTC de creación del pedido.
+        data_tests:
+          - not_null
+      - name: estimated_delivery_at_utc
+        description: Timestamp estimado de entrega.
+      - name: delivered_at_utc
+        description: Timestamp real de entrega (NULL si pendiente).
+      - name: tracking_id
+        description: ID de seguimiento del envío.
+      - name: shipping_service
+        description: Empresa de mensajería usada.
+      - name: shipping_cost_usd
+        description: Coste del envío en USD.
+        data_tests:
+          - not_null
+      - name: item_order_cost_usd
+        description: Coste de los productos del pedido en USD (sin envío).
+        data_tests:
+          - not_null
+      - name: total_order_cost_usd
+        description: Coste total del pedido en USD (productos + envío).
+        data_tests:
+          - not_null
+      - name: status_order
+        #description: '{{ doc("or_order_status") }}'
+        data_tests:
+          - not_null
+      - name: date_load
+        data_tests:
+          - not_null
+
+  # --------------------------------------------------------------------------
+  # stg_sql_server_dbo__order_items
+  # --------------------------------------------------------------------------
+  - name: stg_sql_server_dbo__order_items
+    description: >
+      Staging del detalle de productos por pedido. La granularidad es
+      (order_id, product_id) — usamos surrogate key para tests de unicidad.
+    columns:
+      - name: order_item_id
+        description: Surrogate key MD5(order_id, product_id).
+        data_tests:
+          - unique
+          - not_null
+      - name: order_id
+        description: FK al pedido.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: 
+                to: ref('stg_sql_server_dbo__orders')
+                field: order_id
+      - name: product_id
+        description: FK al producto.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: 
+                to: ref('stg_sql_server_dbo__products')
+                field: product_id
+      - name: quantity
+        description: Unidades del producto en el pedido.
+        data_tests:
+          - not_null
+          - positive_values
+      - name: date_load
+        data_tests:
+          - not_null
+
+  # --------------------------------------------------------------------------
+  # stg_sql_server_dbo__products
+  # --------------------------------------------------------------------------
+  - name: stg_sql_server_dbo__products
+    description: Staging de productos.
+    columns:
+      - name: product_id
+        description: UUID del producto (PK).
+        data_tests:
+          - unique
+          - not_null
+      - name: product_name
+        description: Nombre del producto.
+        data_tests:
+          - not_null
+      - name: unit_price_usd
+        description: Precio unitario actual en USD.
+        data_tests:
+          - not_null
+          - positive_values
+      - name: inventory_units
+        description: Unidades disponibles en stock.
+        data_tests:
+          - not_null
+      - name: date_load
+        data_tests:
+          - not_null
+
+  # --------------------------------------------------------------------------
+  # stg_sql_server_dbo__addresses
+  # --------------------------------------------------------------------------
+  - name: stg_sql_server_dbo__addresses
+    description: Staging de direcciones.
+    columns:
+      - name: address_id
+        description: UUID de la dirección (PK).
+        data_tests:
+          - unique
+          - not_null
+      - name: address_line
+        description: Línea principal de la dirección.
+      - name: zipcode
+        description: Código postal.
+      - name: state
+        description: Estado/provincia.
+      - name: country
+        description: País.
+      - name: date_load
+        data_tests:
+          - not_null
+
+  # --------------------------------------------------------------------------
+  # stg_sql_server_dbo__promos
+  # --------------------------------------------------------------------------
+  - name: stg_sql_server_dbo__promos
+    description: Staging de códigos promocionales.
+    columns:
+      - name: promo_id
+        description: ID de la promoción (PK).
+        data_tests:
+          - unique
+          - not_null
+      - name: discount_usd
+        description: Descuento aplicado en USD.
+        data_tests:
+          - not_null
+      - name: status_promo
+        description: Estado de la promoción (active/inactive).
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments: 
+                values: ['active', 'inactive']
+      - name: date_load
+        data_tests:
+          - not_null
+
+  # --------------------------------------------------------------------------
+  # stg_sql_server_dbo__events
+  # --------------------------------------------------------------------------
+  - name: stg_sql_server_dbo__events
+    description: Staging de eventos de navegación de los usuarios.
+    columns:
+      - name: event_id
+        description: UUID del evento (PK).
+        data_tests:
+          - unique
+          - not_null
+      - name: session_id
+        description: UUID de la sesión.
+        data_tests:
+          - not_null
+      - name: user_id
+        description: FK al usuario.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: 
+                to: ref('stg_sql_server_dbo__users')
+                field: user_id
+      - name: page_url
+        description: URL del evento.
+      - name: event_type
+        description: Tipo de evento.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments: 
+                values: ['page_view', 'add_to_cart', 'checkout', 'package_shipped']
+      - name: order_id
+        description: FK al pedido (sólo eventos relacionados con órdenes).
+      - name: product_id
+        description: FK al producto (sólo eventos relacionados con productos).
+      - name: created_at_utc
+        description: Timestamp UTC del evento.
+        data_tests:
+          - not_null
+      - name: date_load
+        data_tests:
+          - not_null
+
+# ============================================================================
+# UNIT TESTS — Pruebas unitarias sobre lógica del modelo
+# ============================================================================
+# A diferencia de los data_tests (que validan datos reales), los unit_tests
+# validan la LÓGICA del modelo con datos mockeados/sintéticos. Útil para
+# casos extremos y lógica compleja.
+#
+# Comando: dbt test --select stg_sql_server_dbo__users,test_type:unit
+# ============================================================================
+
+unit_tests:
+  - name: test_users_filter_soft_deletes
+    description: >
+      Verifica que los usuarios marcados como _fivetran_deleted=true son
+      excluidos del modelo de staging.
+    model: stg_sql_server_dbo__users
+    given:
+      - input: source('sql_server_dbo', 'users')
+        rows:
+          - {user_id: 'u1', first_name: 'Ana',  last_name: 'García',
+             email: 'ana@example.com',  phone_number: null, address_id: 'a1',
+             created_at: '2024-01-01', updated_at: '2024-01-01',
+             _fivetran_deleted: false, _fivetran_synced: '2024-01-01'}
+          - {user_id: 'u2', first_name: 'Luis', last_name: 'Pérez',
+             email: 'luis@example.com', phone_number: null, address_id: 'a2',
+             created_at: '2024-01-02', updated_at: '2024-01-02',
+             _fivetran_deleted: true,  _fivetran_synced: '2024-01-02'}
+    expect:
+      rows:
+        - {user_id: 'u1', first_name: 'Ana', last_name: 'García',
+           email: 'ana@example.com', phone_number: null, address_id: 'a1',
+           created_at_utc: '2024-01-01', updated_at_utc: '2024-01-01',
+           date_load: '2024-01-01'}

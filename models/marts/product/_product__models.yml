@@ -1,0 +1,50 @@
+# ============================================================================
+# _product__models.yml — Mart del equipo de Producto
+# ============================================================================
+# Modelos pensados específicamente para las necesidades analíticas del equipo
+# de Producto. Si Marketing y Producto necesitan los mismos atributos de
+# usuario, los compartimos vía el core; cada equipo solo añade su propia
+# lógica encima.
+# ============================================================================
+
+version: 2
+
+models:
+
+  - name: fct_user_sessions
+    description: >
+      Tabla de hechos a nivel de sesión de usuario. Una fila por
+      (user_id, session_id) con métricas de duración, eventos por tipo y
+      conversión. Producto la consume desde su BI.
+    columns:
+      - name: user_session_id
+        description: Surrogate key MD5(user_id, session_id).
+        data_tests:
+          - unique
+          - not_null
+      - name: session_id
+        description: ID de la sesión.
+        data_tests:
+          - not_null
+      - name: user_id
+        description: FK a dim_users.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: 
+                to: ref('dim_users')
+                field: user_id
+      - name: user_email
+        description: Email del usuario (denormalizado).
+      - name: session_duration_seconds
+        description: Duración de la sesión en segundos.
+      - name: page_view_count
+        description: Número de page_view en la sesión.
+      - name: add_to_cart_count
+        description: Número de add_to_cart en la sesión.
+      - name: checkout_count
+        description: Número de checkout en la sesión.
+      - name: did_session_convert
+        description: TRUE si la sesión generó al menos un checkout.
+        data_tests:
+          - not_null
