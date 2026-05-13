@@ -1,0 +1,74 @@
+version: 2
+
+sources:
+  - name: kaggle                          # Nombre del source (usado en {{ source() }})
+    schema: KAGGLE                        # Schema en Bronze donde vive la tabla raw
+    database: "{{ 'DEV_BRONZE_DB' if target.name == 'dev' else 'PRO_BRONZE_DB' }}"
+    description: >
+      Dataset de juegos de Steam descargado de Kaggle.
+      Contiene información de lanzamiento, reseñas, jugadores,
+      géneros, tecnologías y editores para ~67.000 juegos.
+
+    quoting:
+      database: false
+      schema: false
+      identifier: false
+
+    freshness:
+      warn_after: {count: 7, period: day}
+      error_after: {count: 30, period: day}
+
+    tables:
+      - name: GAMES_RAW
+        description: >
+          Tabla raw con todos los campos como VARCHAR tal cual llegan del CSV.
+          Contiene ~10% de datos sucios inyectados intencionalmente:
+          typos, mayúsculas aleatorias, nulos disfrazados, fechas con
+          formato incorrecto, números corruptos y filas duplicadas.
+        loaded_at_field: _LOADED_AT
+
+        columns:
+          - name: ROW_INDEX
+            description: Índice original del CSV (sin nombre de columna)
+          - name: GAME
+            description: Nombre del juego en Steam
+          - name: LINK
+            description: URL relativa a la página del juego en Steam (/app/ID/)
+          - name: RELEASE
+            description: Fecha de lanzamiento (cruda, múltiples formatos posibles)
+          - name: PEAK_PLAYERS
+            description: Pico histórico de jugadores simultáneos
+          - name: POSITIVE_REVIEWS
+            description: Número de reseñas positivas
+          - name: NEGATIVE_REVIEWS
+            description: Número de reseñas negativas
+          - name: TOTAL_REVIEWS
+            description: Total de reseñas (positivas + negativas)
+          - name: RATING
+            description: Puntuación calculada (0-100)
+          - name: PRIMARY_GENRE
+            description: Género principal del juego con su ID de Steam entre paréntesis
+          - name: STORE_GENRES
+            description: Lista de todos los géneros separados por coma
+          - name: PUBLISHER
+            description: Editor(es) del juego (puede ser lista separada por coma)
+          - name: DEVELOPER
+            description: Desarrollador(es) del juego (puede ser lista separada por coma)
+          - name: DETECTED_TECHNOLOGIES
+            description: Tecnologías detectadas (Engine, SDK, etc.) separadas por punto y coma
+          - name: STORE_ASSET_MOD_TIME
+            description: Fecha de última modificación del asset en la tienda de Steam
+          - name: REVIEW_PERCENTAGE
+            description: Porcentaje de reseñas positivas (0-100)
+          - name: PLAYERS_RIGHT_NOW
+            description: Jugadores conectados en el momento de la extracción (formato string con comas)
+          - name: HOUR_24_PEAK
+            description: Pico de jugadores en las últimas 24 horas (formato string con comas)
+          - name: ALL_TIME_PEAK
+            description: Pico histórico absoluto de jugadores
+          - name: ALL_TIME_PEAK_DATE
+            description: Fecha en la que se alcanzó el pico histórico
+          - name: _LOADED_AT
+            description: Timestamp de carga a Bronze (metadato de auditoría)
+          - name: _SOURCE_FILE
+            description: Nombre del archivo origen cargado via COPY INTO

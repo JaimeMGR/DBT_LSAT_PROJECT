@@ -1,0 +1,29 @@
+steam_games:
+  target: dev
+  outputs:
+
+    dev:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: TRANSFORMER
+      database: DEV_BRONZE_DB       # Base de datos de lectura (sources en Bronze)
+      warehouse: COMPUTE_WH
+      schema: KAGGLE                # Schema por defecto (sobreescrito por cada capa)
+      threads: 4
+      client_session_keep_alive: false
+      query_tag: dbt_dev
+
+    pro:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: TRANSFORMER
+      database: PRO_BRONZE_DB
+      warehouse: COMPUTE_WH
+      schema: KAGGLE
+      threads: 4
+      client_session_keep_alive: false
+      query_tag: dbt_pro

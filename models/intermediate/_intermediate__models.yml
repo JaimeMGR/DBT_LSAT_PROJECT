@@ -1,0 +1,30 @@
+# ============================================================================
+# _intermediate__models.yml
+# ============================================================================
+# Documentación + tests de los modelos intermedios.
+#
+# Los modelos intermedios típicamente NO se exponen al usuario final, pero
+# sí los testamos para asegurar que la lógica que comparten múltiples marts
+# es correcta.
+# ============================================================================
+
+version: 2
+
+models:
+  - name: int_games__genres_unpivoted
+    description: >
+      Explota el campo store_genres en una fila por cada par juego-género.
+      Extrae el nombre limpio y el ID Steam de cada género.
+      Una fila = un juego + un género.
+
+  - name: int_games__technologies_unpivoted
+    description: >
+      Explota el campo detected_technologies en una fila por cada tecnología.
+      Separa el tipo (Engine, SDK) del nombre (Unity, FMOD, cURL).
+      Una fila = un juego + una tecnología.
+
+  - name: int_games__publishers_developers_normalized
+    description: >
+      Normaliza los campos publisher y developer extrayendo el primero de la lista.
+      Calcula el total de juegos por desarrollador/editor y flag de juego indie.
+      Una fila = un juego.

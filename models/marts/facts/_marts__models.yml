@@ -1,0 +1,93 @@
+version: 2
+
+models:
+
+  # ── DIMENSIONES ────────────────────────────────────────────────────────────
+
+  - name: dim_juego
+    description: Dimensión de juego con atributos descriptivos. Una fila = un juego.
+    columns:
+      - name: id_juego
+        description: Clave surrogada (hash del id_steam)
+        tests: [unique, not_null]
+      - name: id_steam
+        description: ID numérico nativo de Steam
+        tests: [unique, not_null]
+      - name: nombre
+        description: Nombre del juego
+        tests: [not_null]
+
+  - name: dim_fecha
+    description: Dimensión de fecha con atributos de calendario. Una fila = una fecha.
+    columns:
+      - name: id_fecha
+        description: Clave surrogada (hash de la fecha)
+        tests: [unique, not_null]
+      - name: fecha_completa
+        description: Fecha en formato DATE
+        tests: [unique, not_null]
+
+  - name: dim_desarrollador
+    description: Desarrolladores únicos. Una fila = un desarrollador.
+    columns:
+      - name: id_desarrollador
+        description: Clave surrogada
+        tests: [unique, not_null]
+      - name: nombre
+        description: Nombre del desarrollador
+        tests: [unique, not_null]
+
+  - name: dim_editor
+    description: Editores únicos. Una fila = un editor.
+    columns:
+      - name: id_editor
+        description: Clave surrogada
+        tests: [unique, not_null]
+      - name: nombre
+        description: Nombre del editor
+        tests: [unique, not_null]
+
+  - name: dim_genero
+    description: Géneros Steam únicos. Una fila = un género.
+    columns:
+      - name: id_genero
+        description: Clave surrogada
+        tests: [unique, not_null]
+      - name: id_genero_steam
+        description: ID nativo de Steam del género
+        tests: [unique, not_null]
+
+  - name: dim_tecnologia
+    description: Tecnologías detectadas únicas. Una fila = tipo + nombre.
+    columns:
+      - name: id_tecnologia
+        description: Clave surrogada
+        tests: [unique, not_null]
+
+  - name: dim_segmento
+    description: Segmentos estáticos de tamaño de juego por reseñas.
+    columns:
+      - name: id_segmento
+        description: ID del segmento (1-5)
+        tests: [unique, not_null]
+
+  # ── HECHOS ─────────────────────────────────────────────────────────────────
+
+  - name: fct_actividad_juego
+    description: >
+      Tabla de hechos central. Una fila = un juego con sus métricas de
+      jugadores, reseñas y métricas calculadas (días hasta pico, ratio retención).
+    columns:
+      - name: id_juego
+        description: FK a dim_juego
+        tests: [not_null, relationships: {to: ref('dim_juego'), field: id_juego}]
+      - name: pico_historico
+        description: Pico histórico de jugadores simultáneos
+      - name: total_resenas
+        description: Total de reseñas del juego
+      - name: puntuacion
+        description: Puntuación del juego (0-100)
+      - name: dias_hasta_pico
+        description: Días transcurridos desde el lanzamiento hasta el pico histórico
+      - name: ratio_retencion
+        description: Proporción de jugadores actuales respecto al pico histórico

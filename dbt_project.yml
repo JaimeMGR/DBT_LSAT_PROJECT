@@ -14,148 +14,67 @@
 # modelo concreto usando el bloque `{{ config(...) }}`.
 # ============================================================================
 
-name: 'repo_demo'
+name: 'steam_games'
 version: '1.0.0'
 config-version: 2
 
-# El profile debe coincidir con el definido en profiles.yml (en dbt Core) o
-# con la conexión seleccionada en dbt Cloud.
-profile: 'default'
+profile: 'steam_games'
 
-# ----------------------------------------------------------------------------
-# Rutas de archivos (no es necesario modificar a no ser que se renombren
-# los directorios estándar)
-# ----------------------------------------------------------------------------
-model-paths:    ["models"]
+# Rutas de los directorios del proyecto
+model-paths: ["models"]
 analysis-paths: ["analyses"]
-test-paths:     ["tests"]
-seed-paths:     ["seeds"]
-macro-paths:    ["macros"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
 snapshot-paths: ["snapshots"]
-docs-paths:     ["docs"]
 
-target-path: "target"           # Aquí dbt deja el SQL compilado y los artefactos
-clean-targets:                  # Directorios que `dbt clean` elimina
+target-path: "target"
+clean-targets:
   - "target"
   - "dbt_packages"
 
-# ----------------------------------------------------------------------------
-# Hooks a nivel de proyecto
-# ----------------------------------------------------------------------------
-# `on-run-start` se ejecuta al inicio de cada `dbt run/build/seed/snapshot`.
-# Lo usamos para asegurar que el warehouse de Snowflake está activo antes
-# de lanzar las transformaciones (si está suspendido y la primera query
-# tarda mucho, se evitan timeouts).
-
-#on-run-start:
-#  - "ALTER WAREHOUSE WH_CURSO_DATA_ENGINEERING RESUME IF SUSPENDED;"
-
-# ----------------------------------------------------------------------------
-# Variables de proyecto
-# ----------------------------------------------------------------------------
-# Variables accesibles desde cualquier modelo/macro/test usando `{{ var('...') }}`.
-# Se pueden sobreescribir en línea de comandos con: dbt run --vars '{...}'
-vars:
-  budget_date: '2024-01-01'     # Fecha mínima desde la que filtrar el budget
-
-# ============================================================================
-# CONFIGURACIÓN DE MODELOS
-# ============================================================================
-# Las configuraciones se aplican en cascada por estructura de directorios.
-# Una config en `staging:` aplica a TODOS los modelos bajo /models/staging/
-# salvo que ese modelo tenga su propio bloque `{{ config(...) }}`.
-#
-# El símbolo `+` indica que estamos pasando una config (no un sub-directorio).
-# ============================================================================
+# =============================================================================
+# CONFIGURACIÓN DE MODELOS POR CAPA
+# Cada capa escribe en su base de datos y schema correspondiente
+# =============================================================================
 models:
-  # `+transient: false` evita que Snowflake cree tablas transient por defecto.
-  # Las transient no tienen Time Travel ni Fail-safe; son más baratas pero
-  # más arriesgadas para modelos productivos.
-  +transient: false
+  steam_games:
 
-  repo_demo:
-
-    # ------------------------------------------------------------------------
-    # STAGING — Capa Silver
-    # ------------------------------------------------------------------------
-    # Materializados como vista (sin coste de almacenamiento, siempre datos
-    # actualizados al consultar). Apuntan a la BD SILVER del entorno actual.
-    # ------------------------------------------------------------------------
+    # ── STAGING (Silver) ──────────────────────────────────────────────────────
+    # Limpieza, tipado y renombrado de columnas. Materialización: view.
+    # Escribe en DEV_SILVER_DB.STAGING
     staging:
       +materialized: view
-      +database: "SERGIOEGUI_{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_SILVER_DB"
+      +database: "{{ 'DEV_SILVER_DB' if target.name == 'dev' else 'PRO_SILVER_DB' }}"
+      +schema: STAGING
 
-      google_sheets:
-        +schema: google_sheets        # Schema dentro de SILVER_DB
+    # ── INTERMEDIATE (Silver) ─────────────────────────────────────────────────
+    # Lógica de negocio reutilizable, joins y cálculos previos a marts.
+    # Materialización: view (se recomienda efímero si no se consulta directamente)
+    # Escribe en DEV_SILVER_DB.INTERMEDIATE
+    intermediate:
+      +materialized: view
+      +database: "{{ 'DEV_SILVER_DB' if target.name == 'dev' else 'PRO_SILVER_DB' }}"
+      +schema: INTERMEDIATE
 
-      sql_server_dbo:
-        +schema: sql_server_dbo
-
-    # ------------------------------------------------------------------------
-    # MARTS — Capa Gold
-    # ------------------------------------------------------------------------
-    # Los marts son la capa de consumo. Materializados como tabla por defecto
-    # (rendimiento óptimo para BI). Apuntan a la BD GOLD del entorno.
-    # ------------------------------------------------------------------------
+    # ── MARTS (Gold) ──────────────────────────────────────────────────────────
+    # Tablas dimensionales y de hechos listas para Power BI.
+    # Materialización: table (datos persistidos y optimizados para consulta).
+    # Escribe en DEV_GOLD_DB.MARTS
     marts:
       +materialized: table
-      +database: "SERGIOEGUI_{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_GOLD_DB"
+      +database: "{{ 'DEV_GOLD_DB' if target.name == 'dev' else 'PRO_GOLD_DB' }}"
+      +schema: MARTS
+      dimensions:
+        +materialized: table
+      facts:
+        +materialized: table
 
-      core:
-        +schema: core
-
-        # Los modelos intermedios viven dentro de marts/core/intermediate
-        # pero los configuramos como vistas en un schema separado para no
-        # exponerlos al consumidor final.
-        intermediate:
-          +materialized: view
-          +schema: intermediate
-
-      product:
-        +schema: product              # Mart específico del equipo de Producto
-
-      marketing:
-        +schema: marketing            # Mart específico del equipo de Marketing
-
-# ============================================================================
-# CONFIGURACIÓN DE SEEDS
-# ============================================================================
-# Los seeds van a la base de datos BRONZE (son datos crudos cargados desde
-# CSV: códigos de país, listas de referencia, ...).
+# =============================================================================
+# SEEDS
+# Tablas de referencia estáticas (p.ej. segmentos, mapeos)
+# =============================================================================
 seeds:
-  +schema: seed_data
-  +database: "SERGIOEGUI_{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_BRONZE_DB"
-
-  repo_demo:
-    country_codes:
-      # Tipos de columna explícitos para evitar inferencias erróneas
-      +column_types:
-        country_code: VARCHAR(2)
-        country_name: VARCHAR(100)
-        continent:    VARCHAR(50)
-
-# ============================================================================
-# CONFIGURACIÓN DE SNAPSHOTS
-# ============================================================================
-# Los snapshots viven en SILVER_DB, schema `snapshots`, como tablas no
-# transient (las transient no tienen Time Travel y un snapshot SIN historia
-# pierde su razón de ser).
-snapshots:
-  +transient: false
-  +target_database: "SERGIOEGUI_{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_SILVER_DB"
-  +target_schema: snapshots
-
-# ============================================================================
-# CONFIGURACIÓN DE TESTS
-# ============================================================================
-# Por defecto, fallamos en error. `store_failures: true` guarda las filas que
-# fallan los tests en una tabla auditable (útil en debugging).
-tests:
-  +store_failures: false
-  +severity: error
-
-# ============================================================================
-# CONFIGURACIÓN DE FUENTES
-# ============================================================================
-# Aquí podríamos sobreescribir freshness o metadata de sources de forma global.
-# (Por ahora todo se gestiona en cada _sources.yml).
+  steam_games:
+    +database: "{{ 'DEV_BRONZE_DB' if target.name == 'dev' else 'PRO_BRONZE_DB' }}"
+    +schema: SEEDS
