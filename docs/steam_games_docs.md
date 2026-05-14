@@ -21,6 +21,34 @@ Proporcionar un modelo dimensional limpio y fiable que permita responder pregunt
 
 ## Arquitectura
 
+DEV
+Change branch
+
+
+Create a pull request on GitHub
+
+
+
+Save
+1415161718192021222324111213891067345
+
+Commands
+Code quality
+Markdown Preview$0
+DEV
+Change branch
+
+
+Create a pull request on GitHub
+
+
+
+Save
+1415161718192021222324111213891067345
+
+Commands
+Code quality
+Markdown Preview$0
 | Capa | Base de datos | Propósito |
 |------|--------------|-----------|
 | **Bronze** | `DEV_BRONZE_DB_STEAM` | Datos crudos tal cual llegan del CSV. Todo VARCHAR. |

@@ -42,28 +42,28 @@ models:
 
     # ── STAGING (Silver) ──────────────────────────────────────────────────────
     # Limpieza, tipado y renombrado de columnas. Materialización: view.
-    # Escribe en DEV_SILVER_DB.STAGING
+    # Escribe en DEV_SILVER_DB_STEAM.STAGING
     staging:
       +materialized: view
-      +database: "{{ 'DEV_SILVER_DB' if target.name == 'dev' else 'PRO_SILVER_DB' }}"
+      +database: "{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_SILVER_DB_STEAM"
       +schema: STAGING
 
     # ── INTERMEDIATE (Silver) ─────────────────────────────────────────────────
     # Lógica de negocio reutilizable, joins y cálculos previos a marts.
     # Materialización: view (se recomienda efímero si no se consulta directamente)
-    # Escribe en DEV_SILVER_DB.INTERMEDIATE
+    # Escribe en DEV_SILVER_DB_STEAM.INTERMEDIATE
     intermediate:
       +materialized: view
-      +database: "{{ 'DEV_SILVER_DB' if target.name == 'dev' else 'PRO_SILVER_DB' }}"
+      +database: "{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_SILVER_DB_STEAM"
       +schema: INTERMEDIATE
 
     # ── MARTS (Gold) ──────────────────────────────────────────────────────────
     # Tablas dimensionales y de hechos listas para Power BI.
     # Materialización: table (datos persistidos y optimizados para consulta).
-    # Escribe en DEV_GOLD_DB.MARTS
+    # Escribe en DEV_GOLD_DB_STEAM.MARTS
     marts:
       +materialized: table
-      +database: "{{ 'DEV_GOLD_DB' if target.name == 'dev' else 'PRO_GOLD_DB' }}"
+      +database: "{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_GOLD_DB_STEAM"
       +schema: MARTS
       dimensions:
         +materialized: table
@@ -76,5 +76,5 @@ models:
 # =============================================================================
 seeds:
   steam_games:
-    +database: "{{ 'DEV_BRONZE_DB' if target.name == 'dev' else 'PRO_BRONZE_DB' }}"
+    +database: "{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_BRONZE_DB_STEAM"
     +schema: SEEDS
