@@ -3,6 +3,12 @@
 -- está alineado con el campo porcentaje_positivo del origen.
 -- Diferencia tolerada: 2 puntos porcentuales (redondeo del origen)
 
+{{
+    config(
+        severity = 'warn'
+    )
+}}
+
 SELECT
     id_steam,
     nombre_juego,

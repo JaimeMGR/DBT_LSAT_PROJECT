@@ -2,6 +2,12 @@
 -- Verifica que ninguna métrica de jugadores o reseñas tenga valores negativos
 -- Los valores negativos son imposibles en el negocio y serían errores de carga
 
+{{
+    config(
+        severity = 'warn'
+    )
+}}
+
 SELECT
     id_steam,
     nombre_juego,

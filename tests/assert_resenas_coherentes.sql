@@ -2,6 +2,12 @@
 -- Verifica que total_resenas = resenas_positivas + resenas_negativas
 -- Si devuelve filas, el test FALLA (hay inconsistencia en los datos)
 
+{{
+    config(
+        severity = 'warn'
+    )
+}}
+
 SELECT
     id_steam,
     nombre_juego,

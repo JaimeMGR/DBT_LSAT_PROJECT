@@ -1,6 +1,8 @@
 {{
     config(
-        materialized = 'table'
+        materialized  = 'incremental',
+        unique_key    = 'id_juego',
+        on_schema_change = 'sync_all_columns'
     )
 }}
 
@@ -17,6 +19,11 @@
 
 WITH stg AS (
     SELECT * FROM {{ ref('stg_kaggle__games') }}
+
+    -- Filtro incremental: solo filas nuevas desde la última carga
+    {% if is_incremental() %}
+        WHERE _loaded_at > (SELECT MAX(_loaded_at) FROM {{ this }})
+    {% endif %}
 ),
 
 pub_dev AS (
@@ -81,6 +88,9 @@ SELECT
         THEN ROUND(stg.jugadores_actuales / stg.pico_historico::FLOAT, 4)
         ELSE NULL
     END                                                         AS ratio_retencion,
+
+    -- ── METADATOS DE AUDITORÍA ───────────────────────────────────────────────
+    stg._loaded_at,
 
     -- ── FLAGS DE CALIDAD (heredados de staging) ──────────────────────────────
     stg.flag_fecha_invalida,
