@@ -92,10 +92,10 @@ FROM stg
 INNER JOIN dim_juego dj
         ON stg.id_steam = dj.id_steam
 
-LEFT JOIN dim_fecha df_lanz
+LEFT JOIN dim_fecha_lanz df_lanz
        ON stg.fecha_lanzamiento = df_lanz.fecha_completa
 
-LEFT JOIN dim_fecha df_pico
+LEFT JOIN dim_fecha_pico df_pico
        ON stg.fecha_pico_historico = df_pico.fecha_completa
 
 LEFT JOIN pub_dev pd
