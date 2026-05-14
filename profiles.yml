@@ -8,7 +8,7 @@ steam_games:
       user: "{{ env_var('SNOWFLAKE_USER') }}"
       password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
       role: TRANSFORMER
-      database: DEV_BRONZE_DB       # Base de datos de lectura (sources en Bronze)
+      database: DEV_BRONZE_DB_STEAM       # Base de datos de lectura (sources en Bronze)
       warehouse: COMPUTE_WH
       schema: KAGGLE                # Schema por defecto (sobreescrito por cada capa)
       threads: 4
@@ -21,7 +21,7 @@ steam_games:
       user: "{{ env_var('SNOWFLAKE_USER') }}"
       password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
       role: TRANSFORMER
-      database: PRO_BRONZE_DB
+      database: PRO_BRONZE_DB_STEAM
       warehouse: COMPUTE_WH
       schema: KAGGLE
       threads: 4

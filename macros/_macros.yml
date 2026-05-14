@@ -1,0 +1,38 @@
+version: 2
+
+macros:
+  - name: limpiar_texto
+    description: >
+      Limpia un campo VARCHAR aplicando TRIM y convirtiendo cadenas vacías
+      a NULL. Opcionalmente convierte a mayúsculas con el parámetro
+      `mayusculas=true`. Útil en la capa staging para normalizar campos
+      de texto como publisher, developer o género.
+    arguments:
+      - name: columna
+        type: string
+        description: Nombre del campo a limpiar
+      - name: mayusculas
+        type: boolean
+        description: Si TRUE aplica UPPER. Por defecto FALSE (conserva capitalización con TRIM)
+
+  - name: parsear_fecha
+    description: >
+      Parsea una columna VARCHAR que puede contener fechas en múltiples
+      formatos (YYYY-MM-DD, DD/MM/YYYY, MM-DD-YYYY, DD-MM-YY, DD-MM-YYYY).
+      Devuelve el primer formato que funcione o NULL. Reemplaza el bloque
+      COALESCE(TRY_TO_DATE(...)) repetido en staging.
+    arguments:
+      - name: columna
+        type: string
+        description: Nombre del campo de fecha cruda a parsear
+
+  - name: obtener_segmento
+    description: >
+      Clasifica un juego en uno de 5 segmentos según su volumen de reseñas:
+      Nicho (0-100), Pequeño (101-1.000), Medio (1.001-10.000),
+      Grande (10.001-100.000), AAA (>100.000).
+      Centraliza la lógica de segmentación de negocio.
+    arguments:
+      - name: columna_resenas
+        type: integer
+        description: Nombre del campo con el total de reseñas

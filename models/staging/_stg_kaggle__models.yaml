@@ -48,19 +48,17 @@ models:
 
       - name: puntuacion
         description: Puntuación del juego (0-100)
-        tests:
+        data_tests:
           - dbt_utils.accepted_range:
               min_value: 0
               max_value: 100
-              inclusive: true
 
       - name: porcentaje_positivo
         description: Porcentaje de reseñas positivas (0-100)
-        tests:
+        data_tests:
           - dbt_utils.accepted_range:
               min_value: 0
               max_value: 100
-              inclusive: true
 
       - name: jugadores_actuales
         description: Jugadores conectados al momento de la extracción

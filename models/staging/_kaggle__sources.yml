@@ -3,7 +3,7 @@ version: 2
 sources:
   - name: kaggle                          # Nombre del source (usado en {{ source() }})
     schema: KAGGLE                        # Schema en Bronze donde vive la tabla raw
-    database: "{{ 'DEV_BRONZE_DB' if target.name == 'dev' else 'PRO_BRONZE_DB' }}"
+    database: "{{ 'DEV_BRONZE_DB_STEAM' if target.name == 'dev' else 'PRO_BRONZE_DB_STEAM' }}"
     description: >
       Dataset de juegos de Steam descargado de Kaggle.
       Contiene información de lanzamiento, reseñas, jugadores,
