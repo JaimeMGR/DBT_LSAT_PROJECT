@@ -36,7 +36,7 @@ models:
           - not_null
 
   - name: dim_desarrollador
-    description: Desarrolladores únicos del catálogo de Steam. Una fila = un desarrollador.
+    description: '{{ doc("dim_desarrollador") }}'
     columns:
       - name: id_desarrollador
         description: Clave surrogada
@@ -50,7 +50,6 @@ models:
           - not_null
 
   - name: dim_editor
-    description: Editores únicos del catálogo de Steam. Una fila = un editor.
     columns:
       - name: id_editor
         description: Clave surrogada
@@ -64,7 +63,7 @@ models:
           - not_null
 
   - name: dim_genero
-    description: Géneros Steam únicos. Una fila = un género con su ID nativo de Steam.
+    description: '{{ doc("dim_genero") }}'
     columns:
       - name: id_genero
         description: Clave surrogada
@@ -78,7 +77,7 @@ models:
           - not_null
 
   - name: dim_tecnologia
-    description: Tecnologías detectadas en los juegos. Una fila = tipo + nombre de tecnología.
+    description: '{{ doc("dim_tecnologia") }}'
     columns:
       - name: id_tecnologia
         description: Clave surrogada
@@ -87,7 +86,7 @@ models:
           - not_null
 
   - name: dim_segmento
-    description: Segmentos estáticos de clasificación por volumen de reseñas. 5 segmentos del Nicho al AAA.
+    description: '{{ doc("dim_segmento") }}'
     columns:
       - name: id_segmento
         description: ID del segmento (1-5)

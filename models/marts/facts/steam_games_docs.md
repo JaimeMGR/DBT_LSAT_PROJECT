@@ -88,6 +88,12 @@ del dataset (lanzamientos y picos históricos). Incluye atributos
 de calendario: año, trimestre, mes, día y flag de fin de semana.
 {% enddocs %}
 
+{% docs editor %}
+Dimensión de fecha construida a partir de todas las fechas únicas
+del dataset (lanzamientos y picos históricos). Incluye atributos
+de calendario: año, trimestre, mes, día y flag de fin de semana.
+{% enddocs %}
+
 
 {% docs dim_desarrollador %}
 Dimensión de desarrollador. Contiene el nombre normalizado de cada
