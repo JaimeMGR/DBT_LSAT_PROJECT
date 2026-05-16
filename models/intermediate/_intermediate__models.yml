@@ -1,0 +1,151 @@
+# ============================================================================
+# _intermediate__models.yml
+# ============================================================================
+# Documentación + tests de los modelos intermedios.
+#
+# Los modelos intermedios típicamente NO se exponen al usuario final, pero
+# sí los testamos para asegurar que la lógica que comparten múltiples marts
+# es correcta.
+# ============================================================================
+
+version: 2
+
+models:
+
+  # ── HELPERS (modelos auxiliares previos a los normalizados) ────────────────
+
+  - name: int_games__genres_unpivoted
+    description: >
+      Helper que explota store_genres (lista CSV) en una fila por par juego-género.
+      Lo usan int_games__genres y int_games__game_genres como fuente.
+
+  - name: int_games__technologies_unpivoted
+    description: >
+      Helper que explota detected_technologies (lista) en una fila por par juego-tecnología.
+      Lo usan int_games__technology_types y int_games__game_technologies como fuente.
+
+  # ── DOMINIO GAMES (entidades del ERD) ──────────────────────────────────────
+
+  - name: int_games__games
+    description: Entidad principal de juegos con FKs resueltos a publishers y developers.
+    columns:
+      - name: game_id
+        description: ID de Steam del juego
+        data_tests:
+          - unique
+          - not_null
+
+  - name: int_games__game_metrics
+    description: Métricas separadas (jugadores + reseñas) en una fila por juego.
+    columns:
+      - name: metric_id
+        description: Clave surrogada
+        data_tests:
+          - unique
+          - not_null
+      - name: game_id
+        description: FK a int_games__games
+        data_tests:
+          - not_null
+
+  - name: int_games__publishers
+    description: Catálogo único de editores.
+    columns:
+      - name: id_publisher
+        description: Clave surrogada
+        data_tests:
+          - unique
+          - not_null
+      - name: nombre
+        data_tests:
+          - unique
+          - not_null
+
+  - name: int_games__developers
+    description: Catálogo único de desarrolladores.
+    columns:
+      - name: id_developer
+        description: Clave surrogada
+        data_tests:
+          - unique
+          - not_null
+      - name: nombre
+        data_tests:
+          - unique
+          - not_null
+
+  - name: int_games__genres
+    description: Catálogo único de géneros Steam.
+    columns:
+      - name: genre_id
+        description: ID nativo de Steam
+        data_tests:
+          - unique
+          - not_null
+
+  - name: int_games__game_genres
+    description: Tabla puente games ↔ genres.
+    columns:
+      - name: game_id
+        data_tests:
+          - not_null
+      - name: genre_id
+        data_tests:
+          - not_null
+
+  - name: int_games__technology_types
+    description: Tipos de tecnología (Engine, SDK, Anti-cheat).
+    columns:
+      - name: type_id
+        data_tests:
+          - unique
+          - not_null
+      - name: type_name
+        data_tests:
+          - unique
+          - not_null
+
+  - name: int_games__game_technologies
+    description: Tabla puente games ↔ technologies con FK a technology_types.
+    columns:
+      - name: game_technology_id
+        data_tests:
+          - unique
+          - not_null
+      - name: game_id
+        data_tests:
+          - not_null
+
+  # ── DOMINIO MATCH (entidades del ERD) ──────────────────────────────────────
+
+  - name: int_match__gamemodes
+    description: Catálogo único de modos de juego.
+    columns:
+      - name: id_gamemode
+        data_tests:
+          - unique
+          - not_null
+      - name: nombre
+        data_tests:
+          - unique
+          - not_null
+
+  - name: int_match__regions
+    description: Catálogo único de regiones del servidor.
+    columns:
+      - name: id_region
+        data_tests:
+          - unique
+          - not_null
+      - name: nombre
+        data_tests:
+          - unique
+          - not_null
+
+  - name: int_match__matches
+    description: Tabla principal de partidas con FKs resueltos.
+    columns:
+      - name: match_id
+        data_tests:
+          - unique
+          - not_null

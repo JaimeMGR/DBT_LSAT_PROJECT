@@ -1,0 +1,82 @@
+version: 2
+
+models:
+
+  - name: dim_juego
+    description: Dimensión de juego. Una fila = un juego único de Steam.
+    columns:
+      - name: id_juego
+        description: Clave surrogada (hash del id_steam)
+        data_tests: [unique, not_null]
+      - name: id_steam
+        description: ID nativo de Steam
+        data_tests: [unique, not_null]
+      - name: nombre
+        data_tests: [not_null]
+
+  - name: dim_fecha
+    description: Calendario completo 2000-2030 generado con date_spine.
+    columns:
+      - name: id_fecha
+        description: Clave surrogada (hash de la fecha)
+        data_tests: [unique, not_null]
+      - name: fecha_completa
+        data_tests: [unique, not_null]
+
+  - name: dim_editor
+    description: Editores únicos del catálogo.
+    columns:
+      - name: id_editor
+        data_tests: [unique, not_null]
+
+  - name: dim_desarrollador
+    description: Desarrolladores únicos con su total de juegos publicados.
+    columns:
+      - name: id_desarrollador
+        data_tests: [unique, not_null]
+
+  - name: dim_genero
+    description: Géneros Steam únicos.
+    columns:
+      - name: id_genero
+        data_tests: [unique, not_null]
+
+  - name: dim_tecnologia
+    description: Tecnologías únicas (combinación tipo + nombre).
+    columns:
+      - name: id_tecnologia
+        data_tests: [unique, not_null]
+
+  - name: dim_segmento
+    description: Segmentos de tamaño por reseñas. Origen seed CSV.
+    columns:
+      - name: id_segmento
+        data_tests: [unique, not_null]
+
+  - name: puente_juego_genero
+    description: Puente N:M entre dim_juego y dim_genero.
+    columns:
+      - name: id_juego
+        data_tests: [not_null]
+      - name: id_genero
+        data_tests: [not_null]
+
+  - name: puente_juego_tecnologia
+    description: Puente N:M entre dim_juego y dim_tecnologia.
+    columns:
+      - name: id_juego
+        data_tests: [not_null]
+      - name: id_tecnologia
+        data_tests: [not_null]
+
+  - name: fct_juego
+    description: Tabla de hechos del catálogo. Una fila = un juego con sus métricas. Incremental.
+    columns:
+      - name: id_juego
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_juego')
+              field: id_juego
+      - name: id_segmento
+        description: FK al segmento (1-5)

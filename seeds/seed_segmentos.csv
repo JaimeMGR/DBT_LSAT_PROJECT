@@ -1,0 +1,6 @@
+id_segmento,nombre,rango_resenas,descripcion
+1,Nicho,0-100,Juegos con muy pocas reseñas y alcance reducido
+2,Pequeño,101-1000,Juegos pequeños con comunidad modesta
+3,Medio,1001-10000,Juegos de tamaño medio con comunidad consolidada
+4,Grande,10001-100000,Juegos grandes con amplia base de jugadores
+5,AAA,Mas de 100000,Grandes producciones con enorme volumen de resenas
