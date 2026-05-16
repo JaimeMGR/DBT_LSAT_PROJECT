@@ -1,0 +1,158 @@
+version: 2
+
+sources:
+  - name: kaggle                          # Nombre del source (usado en {{ source() }})
+    schema: KAGGLE                        # Schema en Bronze donde vive la tabla raw
+    database: "{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_BRONZE_DB_STEAM"
+    description: >
+      Dataset de juegos de Steam descargado de Kaggle.
+      Contiene información de lanzamiento, reseñas, jugadores,
+      géneros, tecnologías y editores para ~67.000 juegos.
+      Incluye también datos simulados de partidas multijugador y jugadores.
+
+    quoting:
+      database: false
+      schema: false
+      identifier: false
+
+    freshness:
+      warn_after: {count: 7, period: day}
+      error_after: {count: 30, period: day}
+
+    tables:
+
+      # ── DATASET ORIGINAL KAGGLE ───────────────────────────────────────────
+      - name: GAMES_RAW
+        description: >
+          Tabla raw del dataset Steam de Kaggle. Todos los campos como VARCHAR
+          tal cual llegan del CSV. Contiene ~10% de datos sucios inyectados:
+          typos, mayúsculas aleatorias, nulos disfrazados, fechas con formato
+          incorrecto, números corruptos y filas duplicadas.
+        config:
+          loaded_at_field: _LOADED_AT
+        columns:
+          - name: ROW_INDEX
+            description: Índice original del CSV (sin nombre de columna)
+          - name: GAME
+            description: Nombre del juego en Steam
+          - name: LINK
+            description: URL relativa a la página del juego en Steam (/app/ID/)
+          - name: RELEASE
+            description: Fecha de lanzamiento (cruda, múltiples formatos posibles)
+          - name: PEAK_PLAYERS
+            description: Pico histórico de jugadores simultáneos
+          - name: POSITIVE_REVIEWS
+            description: Número de reseñas positivas
+          - name: NEGATIVE_REVIEWS
+            description: Número de reseñas negativas
+          - name: TOTAL_REVIEWS
+            description: Total de reseñas (positivas + negativas)
+          - name: RATING
+            description: Puntuación calculada (0-100)
+          - name: PRIMARY_GENRE
+            description: Género principal del juego con su ID de Steam entre paréntesis
+          - name: STORE_GENRES
+            description: Lista de todos los géneros separados por coma
+          - name: PUBLISHER
+            description: Editor(es) del juego (puede ser lista separada por coma)
+          - name: DEVELOPER
+            description: Desarrollador(es) del juego (puede ser lista separada por coma)
+          - name: DETECTED_TECHNOLOGIES
+            description: Tecnologías detectadas (Engine, SDK, etc.) separadas por punto y coma
+          - name: STORE_ASSET_MOD_TIME
+            description: Fecha de última modificación del asset en la tienda
+          - name: REVIEW_PERCENTAGE
+            description: Porcentaje de reseñas positivas (0-100)
+          - name: PLAYERS_RIGHT_NOW
+            description: Jugadores conectados al momento de la extracción
+          - name: HOUR_24_PEAK
+            description: Pico de jugadores en las últimas 24 horas
+          - name: ALL_TIME_PEAK
+            description: Pico histórico absoluto de jugadores
+          - name: ALL_TIME_PEAK_DATE
+            description: Fecha en la que se alcanzó el pico histórico
+          - name: _LOADED_AT
+            description: Timestamp de carga a Bronze (auditoría)
+          - name: _SOURCE_FILE
+            description: Nombre del archivo origen cargado via COPY INTO
+
+      # ── DATOS SIMULADOS DE PARTIDAS MULTIJUGADOR ──────────────────────────
+      - name: MATCH_RAW
+        description: >
+          Tabla raw con partidas multijugador simuladas. Datos sucios:
+          modos de juego en distintos formatos (mayúsculas/minúsculas, typos
+          como '@ren@ 3v3' o 'battle r0yale'), regiones con mayúsculas
+          inconsistentes y scores con espacios variables ('42 - 6' vs '42-6').
+        config:
+          loaded_at_field: _LOADED_AT
+        columns:
+          - name: MATCH_ID
+            description: Identificador único de la partida
+          - name: GAME
+            description: Nombre del juego (se resolverá a id_juego via JOIN con DIM_JUEGO)
+          - name: GAMEMODE
+            description: Modo de juego (en Silver se normaliza a una dimensión)
+          - name: TEAM_WINNER
+            description: Indicador del equipo ganador (1 o 2)
+          - name: FINAL_SCORE
+            description: Puntuación final de la partida con formato 'X-Y'
+          - name: TIME_STARTED
+            description: Momento en que comenzó la partida (formato DD-MM-YYYY/HH:MM)
+          - name: TIME_ENDED
+            description: Momento en que acabó la partida (formato DD-MM-YYYY/HH:MM)
+          - name: REGION
+            description: Región del servidor (NA, EUW, EUNE, SA, ASIA, OCE)
+          - name: _LOADED_AT
+            description: Timestamp de carga a Bronze (auditoría)
+          - name: _SOURCE_FILE
+            description: Nombre del archivo origen
+
+      # ── DATOS SIMULADOS DE JUGADORES ──────────────────────────────────────
+      - name: PLAYER_RAW
+        description: >
+          Tabla raw con jugadores simulados. El campo `mail` debe hashearse
+          en Silver con MD5() por privacidad. El campo `age` viene como fecha
+          de nacimiento — en Silver se calcula la edad real.
+        config:
+          loaded_at_field: _LOADED_AT
+        columns:
+          - name: PLAYER_ID
+            description: Identificador único del jugador
+          - name: NICKNAME
+            description: Nombre público del jugador en Steam
+          - name: AGE
+            description: Fecha de nacimiento (no edad — se calcula en Silver)
+          - name: MAIL
+            description: Email del jugador (debe hashearse con MD5 en Silver)
+          - name: DATE_CREATION_PROFILE
+            description: Fecha de creación de la cuenta de Steam
+          - name: _LOADED_AT
+            description: Timestamp de carga a Bronze (auditoría)
+          - name: _SOURCE_FILE
+            description: Nombre del archivo origen
+
+      # ── PUENTE MATCH ↔ PLAYER CON KDA ─────────────────────────────────────
+      - name: MATCH_PLAYER_RAW
+        description: >
+          Tabla puente con el detalle de KDA (Kills/Deaths/Assists) de cada
+          jugador en cada partida. Una fila = un jugador en una partida.
+          Es la base del caso de uso 'Top 10 jugadores por KDA'.
+        config:
+          loaded_at_field: _LOADED_AT
+        columns:
+          - name: MATCH_ID
+            description: FK a MATCH
+          - name: PLAYER_ID
+            description: FK a PLAYER
+          - name: KILLS
+            description: Número de eliminaciones del jugador en la partida
+          - name: DEATHS
+            description: Número de muertes del jugador en la partida
+          - name: ASSISTS
+            description: Número de asistencias del jugador en la partida
+          - name: SCORE
+            description: Puntuación final del jugador en la partida
+          - name: _LOADED_AT
+            description: Timestamp de carga a Bronze (auditoría)
+          - name: _SOURCE_FILE
+            description: Nombre del archivo origen
