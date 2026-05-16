@@ -13,8 +13,8 @@
           - fecha_no_futura
 */
 
-SELECT *
-FROM {{ model }}
-WHERE {{ column_name }} > CURRENT_DATE()
+select *
+from {{ model }}
+where {{ column_name }} > current_date()
 
 {% endtest %}
