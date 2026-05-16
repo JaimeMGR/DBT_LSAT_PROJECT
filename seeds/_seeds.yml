@@ -1,0 +1,12 @@
+version: 2
+
+seeds:
+  - name: seed_segmentos
+    description: Tabla de referencia estática con los 5 segmentos de tamaño de juego.
+    columns:
+      - name: id_segmento
+        description: ID del segmento (1-5)
+        data_tests: [unique, not_null]
+      - name: nombre
+        description: Nombre del segmento (Nicho, Pequeño, Medio, Grande, AAA)
+        data_tests: [unique, not_null]

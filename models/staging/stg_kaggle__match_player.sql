@@ -35,7 +35,10 @@ nulls_normalizados AS (
         TRY_TO_NUMBER(KILLS)         AS kills,
         TRY_TO_NUMBER(DEATHS)        AS deaths,
         TRY_TO_NUMBER(ASSISTS)       AS assists,
-        TRY_TO_NUMBER(SCORE)         AS score
+        TRY_TO_NUMBER(SCORE)         AS score,
+
+        _LOADED_AT,
+        _SOURCE_FILE
 
     FROM deduplicados
 

@@ -1,0 +1,41 @@
+version: 2
+
+models:
+
+  - name: dim_jugador
+    description: Dimensión de jugador. Una fila = un jugador con email anonimizado.
+    columns:
+      - name: id_jugador
+        description: Clave surrogada (hash del player_id)
+        data_tests: [unique, not_null]
+      - name: nickname
+        data_tests: [not_null]
+
+  - name: dim_gamemode
+    description: Modos de juego únicos.
+    columns:
+      - name: id_gamemode
+        data_tests: [unique, not_null]
+
+  - name: dim_region
+    description: Regiones de servidor únicas.
+    columns:
+      - name: id_region
+        data_tests: [unique, not_null]
+
+  - name: fct_match_player
+    description: >
+      Tabla de hechos de partidas. Una fila = un jugador en una partida.
+      Base del caso de uso Top 10 jugadores por KDA. Incremental.
+    columns:
+      - name: id_match_player
+        description: Clave surrogada (hash de match_id + player_id)
+        data_tests: [unique, not_null]
+      - name: id_jugador
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_jugador')
+              field: id_jugador
+      - name: kda
+        description: (kills + assists) / deaths de la partida
