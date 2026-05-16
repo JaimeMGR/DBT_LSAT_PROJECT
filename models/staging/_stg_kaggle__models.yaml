@@ -1,288 +1,197 @@
 version: 2
 
 models:
+
+  # ── JUEGOS ─────────────────────────────────────────────────────────────────
   - name: stg_kaggle__games
     description: >
       Modelo de staging que limpia y tipea la tabla raw GAMES_RAW de Bronze.
       Elimina duplicados, normaliza nulos, castea fechas y números,
       y extrae IDs de Steam. Una fila = un juego único.
     columns:
-
       - name: id_steam
-        description: >
-          ID numérico del juego en Steam (extraído del link)
-        tests:
+        description: ID numérico del juego en Steam (extraído del link)
+        data_tests:
           - unique
           - not_null
-
       - name: nombre_juego
-        description: >
-          Nombre del juego en Steam
-        tests:
+        description: Nombre del juego en Steam
+        data_tests:
           - not_null
-
       - name: link
-        description: >
-          URL relativa del juego en Steam
-        tests:
+        description: URL relativa del juego en Steam
+        data_tests:
           - unique
           - not_null
-
       - name: fecha_lanzamiento
-        description: >
-          Fecha de lanzamiento parseada (NULL si formato inválido)
-
+        description: Fecha de lanzamiento parseada (NULL si formato inválido)
+        data_tests:
+          - fecha_no_futura
       - name: fecha_pico_historico
-        description: >
-          Fecha en que se alcanzó el pico histórico de jugadores
-
+        description: Fecha en que se alcanzó el pico histórico de jugadores
       - name: fecha_mod_tienda
-        description: >
-          Fecha de última modificación del asset en tienda
-
+        description: Fecha de última modificación del asset en tienda
       - name: pico_jugadores_reciente
-        description: >
-          Pico de jugadores reciente (entero limpio)
-
+        description: Pico de jugadores reciente (entero limpio)
       - name: resenas_positivas
-        description: >
-          Número de reseñas positivas
-
+        description: Número de reseñas positivas
       - name: resenas_negativas
-        description: >
-          Número de reseñas negativas
-
+        description: Número de reseñas negativas
       - name: total_resenas
-        description: >
-          Total de reseñas
-
+        description: Total de reseñas
       - name: puntuacion
-        description: >
-          Puntuación del juego (0-100)
+        description: Puntuación del juego (0-100)
         data_tests:
           - dbt_utils.accepted_range:
               min_value: 0
               max_value: 100
-
       - name: porcentaje_positivo
-        description: >
-          Porcentaje de reseñas positivas (0-100)
+        description: Porcentaje de reseñas positivas (0-100)
         data_tests:
-          - dbt_utils.accepted_range:
-              min_value: 0
-              max_value: 100
-
+          - rango_porcentaje
       - name: jugadores_actuales
-        description: >
-          Jugadores conectados al momento de la extracción
-
+        description: Jugadores conectados al momento de la extracción
       - name: pico_24h
-        description: >
-          Pico de jugadores en las últimas 24 horas
-
+        description: Pico de jugadores en las últimas 24 horas
       - name: pico_historico
-        description: >
-          Pico histórico absoluto de jugadores
-
+        description: Pico histórico absoluto de jugadores
       - name: genero_primario
-        description: >
-          Nombre del género principal (texto limpio sin ID)
-
+        description: Nombre del género principal (texto limpio sin ID)
       - name: id_genero_primario_steam
-        description: >
-          ID del género principal en Steam
-
+        description: ID del género principal en Steam
       - name: store_genres
-        description: >
-          Lista completa de géneros separada por coma
-
+        description: Lista completa de géneros separada por coma
       - name: publisher
-        description: >
-          Editor(es) del juego
-
+        description: Editor(es) del juego
       - name: developer
-        description: >
-          Desarrollador(es) del juego
-
+        description: Desarrollador(es) del juego
       - name: detected_technologies
-        description: >
-          Tecnologías detectadas separadas por punto y coma
-
+        description: Tecnologías detectadas separadas por punto y coma
       - name: flag_fecha_invalida
-        description: >
-          TRUE si la fecha de lanzamiento no pudo parsearse
-
+        description: TRUE si la fecha de lanzamiento no pudo parsearse
       - name: flag_numero_invalido
-        description: >
-          TRUE si algún campo numérico clave vino corrupto del origen
-
+        description: TRUE si algún campo numérico clave vino corrupto del origen
       - name: _loaded_at
-        description: >
-          Timestamp de carga a Bronze
-
+        description: Timestamp de carga a Bronze
       - name: _source_file
-        description: >
-          Nombre del archivo origen
+        description: Nombre del archivo origen
 
-
+  # ── JUGADORES ──────────────────────────────────────────────────────────────
   - name: stg_kaggle__player
     description: >
-      Modelo de staging que limpia y tipea la tabla raw PLAYER_RAW de Bronze.
-      
+      Modelo de staging que limpia y tipea la tabla raw PLAYER de Bronze.
+      Hashea el email con MD5 y calcula la edad desde la fecha de nacimiento.
     columns:
-
       - name: player_id
-        description: >
-          ID numérico del jugador en Steam
-        tests:
+        description: ID numérico del jugador
+        data_tests:
           - unique
           - not_null
-
       - name: nickname
-        description: >
-          Nombre del jugador
-        tests:
+        description: Nombre público del jugador en Steam
+        data_tests:
           - not_null
-
-      - name: age
-        description: >
-          Fecha de nacimiento (NULL si formato inválido)
-        tests:
-          - valid_date
-          - not_null
-
-      - name: mail
-        description: >
-          direccion de correo del jugador
-        tests:
+      - name: fecha_nacimiento
+        description: Fecha de nacimiento parseada (NULL si formato inválido)
+      - name: edad
+        description: Edad calculada desde la fecha de nacimiento
+      - name: mail_hash
+        description: Hash MD5 del email del jugador (anonimizado)
+        data_tests:
           - unique
           - not_null
-
-      - name: date_creation_profile
-        description: >
-          Fecha de creación de la cuenta de usuario
-
+      - name: fecha_creacion_perfil
+        description: Fecha de creación de la cuenta de Steam
+        data_tests:
+          - fecha_no_futura
+      - name: flag_age_invalida
+        description: TRUE si la fecha de nacimiento no pudo parsearse
       - name: _loaded_at
-        description: >
-          Timestamp de carga a Bronze
-
+        description: Timestamp de carga a Bronze
       - name: _source_file
-        description: >
-          Nombre del archivo origen
+        description: Nombre del archivo origen
 
-
+  # ── PARTIDAS ───────────────────────────────────────────────────────────────
   - name: stg_kaggle__match
     description: >
-      Modelo de staging que limpia y tipea la tabla raw PLAYER_RAW de Bronze.
-      
+      Modelo de staging que limpia y tipea la tabla raw MATCH de Bronze.
+      Normaliza modos de juego y regiones, y parsea fechas y horas.
+      Los FK se resuelven en el modelo intermedio int_match__matches.
     columns:
-
       - name: match_id
-        description: >
-          ID numérico de la partida
-        tests:
+        description: ID numérico de la partida
+        data_tests:
           - unique
           - not_null
-
-      - name: game_id
-        description: >
-          ID del juego referenciado en bronce
-        tests:
+      - name: game
+        description: Nombre del juego (texto, se resuelve a FK en intermediate)
+        data_tests:
           - not_null
-
-      - name: gamemode_id
-        description: >
-          ID del modo de juego de la partida (en Bronce es el nombre)
-        tests:
-          - not_null
-
+      - name: gamemode
+        description: Modo de juego normalizado (texto)
       - name: team_winner
-        description: >
-          Referencia a que equipo ha ganado
-        tests:
-          - unique
-          - not_null
-
-      - name: Final_score
-        description: >
-          Puntuación final de la partida
-
-      - name: day_started 
-        description: >
-          fecha de que día ha empezado la partida
-
-      - name: day_ended 
-        description: >
-          fecha de que día ha terminado la partida
-
-      - name: hour_started 
-        description: >
-          hora de que día ha empezado la partida
-
-      - name: hour_ended 
-        description: >
-          hora de que día ha terminado la partida
-
-      - name: id_region 
-        description: >
-          Region donde se ha jugado la partida
-
+        description: Equipo ganador de la partida (1 o 2)
+      - name: final_score
+        description: Puntuación final de la partida
+      - name: day_started
+        description: Día en que empezó la partida
+      - name: day_ended
+        description: Día en que terminó la partida
+        data_tests:
+          - fecha_fin_posterior_inicio:
+              fecha_inicio: day_started
+              fecha_fin: day_ended
+      - name: hour_started
+        description: Hora a la que empezó la partida
+      - name: hour_ended
+        description: Hora a la que terminó la partida
+      - name: region
+        description: Región del servidor (texto, se resuelve a FK en intermediate)
+      - name: flag_gamemode_desconocido
+        description: TRUE si el modo de juego no se pudo normalizar
+      - name: flag_fecha_invalida
+        description: TRUE si la fecha de inicio no pudo parsearse
       - name: _loaded_at
-        description: >
-          Timestamp de carga a Bronze
-
+        description: Timestamp de carga a Bronze
       - name: _source_file
-        description: >
-          Nombre del archivo origen
+        description: Nombre del archivo origen
 
-
+  # ── KDA POR PARTIDA ────────────────────────────────────────────────────────
   - name: stg_kaggle__match_player
     description: >
-      Modelo de staging que limpia y tipea la tabla raw MATCH_PLAYER_RAW de Bronze.
-      Elimina duplicados, normaliza nulos, castea fechas y números,
-      y extrae IDs de Steam. Una fila = un juego único.
+      Modelo de staging de la tabla raw MATCH_PLAYER de Bronze.
+      Detalle de KDA de cada jugador en cada partida.
+      Una fila = un jugador en una partida.
     columns:
-
       - name: match_id
-        description: >
-          ID numérico del juego en Steam (extraído del link)
-        tests:
+        description: FK a la partida
+        data_tests:
           - not_null
-
       - name: player_id
-        description: >
-          Nombre del juego en Steam
-        tests:
+        description: FK al jugador
+        data_tests:
           - not_null
-
       - name: kills
-        description: >
-          Cantidad de kills
-        tests:
+        description: Cantidad de eliminaciones
+        data_tests:
           - not_null
-
+          - kda_valido:
+              kills_column: kills
+              deaths_column: deaths
+              assists_column: assists
       - name: deaths
-        description: >
-          Cantidad de muertes
-        tests:
+        description: Cantidad de muertes
+        data_tests:
           - not_null
-
       - name: assists
-        description: >
-          Cantidad de asistencias
-        tests:
+        description: Cantidad de asistencias
+        data_tests:
           - not_null
-
       - name: score
-        description: >
-          Puntuación al final de la partida
-        tests:
+        description: Puntuación del jugador al final de la partida
+        data_tests:
           - not_null
-
       - name: _loaded_at
-        description: >
-          Timestamp de carga a Bronze
-
+        description: Timestamp de carga a Bronze
       - name: _source_file
-        description: >
-          Nombre del archivo origen
+        description: Nombre del archivo origen

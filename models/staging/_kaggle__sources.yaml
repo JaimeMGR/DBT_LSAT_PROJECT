@@ -14,10 +14,10 @@ sources:
       database: false
       schema: false
       identifier: false
-
-    freshness:
-      warn_after: {count: 7, period: day}
-      error_after: {count: 30, period: day}
+    config:
+      freshness:
+        warn_after: {count: 7, period: day}
+        error_after: {count: 30, period: day}
 
     tables:
 
