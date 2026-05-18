@@ -9,18 +9,21 @@ models:
         description: Clave surrogada (hash del player_id)
         data_tests: [unique, not_null]
       - name: nickname
+        description: Nombre personalizado del usuario
         data_tests: [not_null]
 
   - name: dim_gamemode
     description: Modos de juego únicos.
     columns:
       - name: id_gamemode
+        description: Clave surrogada (hash del id_gamemode)
         data_tests: [unique, not_null]
 
   - name: dim_region
     description: Regiones de servidor únicas.
     columns:
       - name: id_region
+        description: Clave surrogada (hash del id_region)
         data_tests: [unique, not_null]
 
   - name: fct_match_player
@@ -32,6 +35,7 @@ models:
         description: Clave surrogada (hash de match_id + player_id)
         data_tests: [unique, not_null]
       - name: id_jugador
+        description: Clave surrogada (hash del id_jugador)
         data_tests:
           - not_null
           - relationships:
