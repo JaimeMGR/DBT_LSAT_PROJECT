@@ -12,6 +12,7 @@ models:
         description: ID nativo de Steam
         data_tests: [unique, not_null]
       - name: nombre
+        description: Nombre del juego
         data_tests: [not_null]
 
   - name: dim_fecha
@@ -21,58 +22,69 @@ models:
         description: Clave surrogada (hash de la fecha)
         data_tests: [unique, not_null]
       - name: fecha_completa
+        description: Fecha completa
         data_tests: [unique, not_null]
 
   - name: dim_editor
     description: Editores únicos del catálogo.
     columns:
       - name: id_editor
+        description: Clave surrogada (hash del id_editor)
         data_tests: [unique, not_null]
 
   - name: dim_desarrollador
     description: Desarrolladores únicos con su total de juegos publicados.
     columns:
       - name: id_desarrollador
+        description: Clave surrogada (hash del id_desarrollador)
         data_tests: [unique, not_null]
 
   - name: dim_genero
     description: Géneros Steam únicos.
     columns:
       - name: id_genero
+        description: Clave surrogada (hash del id_genero)
         data_tests: [unique, not_null]
 
   - name: dim_tecnologia
     description: Tecnologías únicas (combinación tipo + nombre).
     columns:
       - name: id_tecnologia
+        description: Clave surrogada (hash del id_tecnologia)
         data_tests: [unique, not_null]
 
   - name: dim_segmento
     description: Segmentos de tamaño por reseñas. Origen seed CSV.
     columns:
       - name: id_segmento
+        description: Clave surrogada (hash del id_segmento)
         data_tests: [unique, not_null]
 
   - name: puente_juego_genero
     description: Puente N:M entre dim_juego y dim_genero.
     columns:
       - name: id_juego
+        description: Clave surrogada (hash del id_juego)
         data_tests: [not_null]
       - name: id_genero
+        description: Clave surrogada (hash del id_genero)
         data_tests: [not_null]
 
   - name: puente_juego_tecnologia
     description: Puente N:M entre dim_juego y dim_tecnologia.
     columns:
       - name: id_juego
+        description: Clave surrogada (hash del id_juego)
         data_tests: [not_null]
       - name: id_tecnologia
+        description: Clave surrogada (hash del id_tecnologia)
         data_tests: [not_null]
 
   - name: fct_juego
     description: Tabla de hechos del catálogo. Una fila = un juego con sus métricas. Incremental.
     columns:
       - name: id_juego
+        description: Clave surrogada (hash del id_juego)
         data_tests:
           - not_null
           - relationships:
