@@ -88,7 +88,8 @@ models:
         data_tests:
           - not_null
           - relationships:
-              to: ref('dim_juego')
-              field: id_juego
+              arguments:
+                to: ref('dim_juego')
+                field: id_juego
       - name: id_segmento
         description: FK al segmento (1-5)

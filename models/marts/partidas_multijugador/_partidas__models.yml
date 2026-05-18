@@ -39,7 +39,8 @@ models:
         data_tests:
           - not_null
           - relationships:
-              to: ref('dim_jugador')
-              field: id_jugador
+              arguments:
+                to: ref('dim_jugador')
+                field: id_jugador
       - name: kda
         description: (kills + assists) / deaths de la partida
