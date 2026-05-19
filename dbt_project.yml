@@ -70,7 +70,7 @@ models:
 # SEEDS
 # Tablas de referencia estáticas (p.ej. segmentos, mapeos)
 # =============================================================================
-    seeds:
-      steam_games:
-        +database: "{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_GOLD_DB_STEAM"
-        +schema: MARTS
+seeds:
+  steam_games:
+    +database: "{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_GOLD_DB_STEAM"
+    +schema: MARTS
