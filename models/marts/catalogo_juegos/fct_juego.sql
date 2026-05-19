@@ -84,4 +84,4 @@ FROM stg s
 JOIN games   g ON s.id_steam = g.game_id
 LEFT JOIN metrics m ON g.game_id = m.game_id
 WHERE m.total_reviews IS NOT NULL
-   OR m.all_time_peak IS NOT NULL;
+   OR m.all_time_peak IS NOT NULL
