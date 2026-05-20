@@ -50,7 +50,7 @@ models:
 
     # ── INTERMEDIATE (Silver) ─────────────────────────────────────────────────
     # Lógica de negocio reutilizable, joins y cálculos previos a marts.
-    # Materialización: view (se recomienda efímero si no se consulta directamente)
+    # Materialización: view
     # Escribe en DEV_SILVER_DB_STEAM.INTERMEDIATE
     intermediate:
       +materialized: view
@@ -59,7 +59,7 @@ models:
 
     # ── MARTS (Gold) ──────────────────────────────────────────────────────────
     # Tablas dimensionales y de hechos listas para Power BI.
-    # Materialización: table (datos persistidos y optimizados para consulta).
+    # Materialización: table (datos optimizados para consulta).
     # Escribe en DEV_GOLD_DB_STEAM.MARTS
     marts:
       +materialized: table
@@ -70,7 +70,7 @@ models:
 # SEEDS
 # Tablas de referencia estáticas (p.ej. segmentos, mapeos)
 # =============================================================================
-    seeds:
-      steam_games:
-        +database: "{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_GOLD_DB_STEAM"
-        +schema: MARTS
+seeds:
+  steam_games:
+    +database: "{{ env_var('DBT_ENVIRONMENTS', 'FAIL') }}_GOLD_DB_STEAM"
+    +schema: MARTS

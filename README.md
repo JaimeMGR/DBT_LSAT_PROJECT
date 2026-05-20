@@ -6,9 +6,18 @@ Pipeline de datos completo end-to-end para analizar el catálogo de Steam
 (~67.000 juegos) y un dominio simulado de partidas multijugador.
 
 Arquitectura medallion **Bronze → Silver → Gold** con dbt Cloud y Snowflake,
-consumido en Power BI. El dataset incluye un ~10% de datos sucios inyectados
-intencionalmente (typos, nulos disfrazados, fechas mal formateadas, duplicados)
-para demostrar las técnicas de limpieza y testing de datos.
+consumido en Power BI con un tema visual inspirado en la plataforma de Steam.
+
+El dataset incluye un ~10% de datos sucios inyectados intencionalmente (typos,
+nulos disfrazados, fechas mal formateadas, duplicados) para demostrar las
+técnicas de limpieza y testing de datos.
+
+## Stack tecnológico
+
+- **Snowflake** — data warehouse (Bronze / Silver / Gold, DEV y PRO)
+- **dbt Cloud** — transformación, testing, documentación y orquestación
+- **Power BI** — visualización y cuadros de mando con tema Steam
+- **Python** — generación de los datos simulados de partidas
 
 ## Arquitectura
 
@@ -108,6 +117,7 @@ steam_games/
 │   ├── assert_porcentaje_coherente.sql
 │   ├── assert_metricas_no_negativas.sql
 │   └── assert_fct_sin_juegos_huerfanos.sql
+├── generar_datos_multijugador.py  # Script Python para generar los datos
 ├── dbt_project.yml
 ├── packages.yml
 └── profiles.yml                   # ⚠ NO subir a Git (.gitignore)
@@ -116,21 +126,48 @@ steam_games/
 ## Capas en detalle
 
 ### Bronze
-Cuatro tablas raw cargadas tal cual desde CSV, todos los campos como `VARCHAR`.
-Incluye columnas de auditoría `_LOADED_AT` y `_SOURCE_FILE`.
+
+Cuatro tablas raw cargadas tal cual desde CSV, todos los campos como `VARCHAR`
+para que ningún dato corrupto rompa la ingesta. Incluye columnas de auditoría
+`_LOADED_AT` y `_SOURCE_FILE`.
 
 ### Silver
-- **Staging** — limpieza, tipado y eliminación de duplicados. Relación 1:1 con
-  las tablas de Bronze. Materialización `view`.
+
+- **Staging** — limpieza, tipado y eliminación de duplicados. Relación 1:1
+  con las tablas de Bronze. Materialización `view`. Incluye anonimización del
+  email del jugador con hash MD5 por privacidad.
 - **Intermediate** — normalización en 13 entidades según el modelo
   entidad-relación, organizadas en dos dominios (juegos y partidas).
 
 ### Gold
+
 Dos data marts en esquema estrella:
-- **Catálogo de juegos** — `fct_juego` con 7 dimensiones y 2 tablas puente.
-- **Partidas multijugador** — `fct_match_player` con granularidad
-  jugador-partida. `dim_juego` y `dim_fecha` son dimensiones conformadas
-  compartidas entre ambos marts.
+
+- **Catálogo de juegos** — `fct_juego` (incremental) con 7 dimensiones y
+  2 tablas puente para las relaciones N:M.
+- **Partidas multijugador** — `fct_match_player` (incremental) con
+  granularidad jugador-partida (~400.000 filas).
+
+`dim_juego` y `dim_fecha` son **dimensiones conformadas** compartidas entre
+ambos marts.
+
+## Generación de datos
+
+El dominio de partidas multijugador no existe en el dataset original de
+Kaggle. Se generan con un script de Python:
+
+```bash
+python generar_datos_multijugador.py
+```
+
+Produce tres CSV que luego se cargan en Bronze:
+- `matches.csv` — 50.000 partidas
+- `players.csv` — 5.000 jugadores
+- `match_player.csv` — ~400.000 filas de estadísticas KDA
+
+El script usa solo los 18 juegos multijugador reales del dataset e inyecta
+suciedad realista (typos, mayúsculas inconsistentes) para reproducir el
+aspecto de datos reales.
 
 ## Comandos principales
 
@@ -138,11 +175,17 @@ Dos data marts en esquema estrella:
 # Instalar paquetes
 dbt deps
 
-# Cargar seeds
+# Cargar seeds (necesario antes del primer run)
 dbt seed
 
 # Ejecutar todos los modelos
 dbt run
+
+# Construir todo en orden (seeds + modelos + tests + snapshots)
+dbt build
+
+# Reconstruir desde cero (limpia el incremental)
+dbt build --full-refresh
 
 # Solo una capa
 dbt run --select staging
@@ -152,16 +195,27 @@ dbt run --select marts
 # Ejecutar tests
 dbt test
 
-# Construir todo en orden (seeds + modelos + tests + snapshots)
-dbt build
-
 # Snapshot SCD-2
 dbt snapshot
 
-# Generar y servir documentación
+# Documentación
 dbt docs generate
 dbt docs serve
 ```
+
+## Orquestación — Jobs en dbt Cloud
+
+Tres jobs configurados en `Deploy → Jobs`:
+
+| Job                  | Trigger              | Comandos                                          |
+|----------------------|----------------------|---------------------------------------------------|
+| `daily_full_refresh` | Manual               | `dbt deps → seed → run → test → snapshot`         |
+| `docs_generate`      | Manual               | `dbt docs generate`                               |
+| `ci_check`           | Pull Request         | `dbt build` con `state:modified+`                 |
+
+Los jobs están en manual (no programados) como decisión consciente para no
+consumir créditos en un proyecto de desarrollo. En un entorno real bastaría
+con activar el cron en `Settings → Triggers → Schedule`.
 
 ## Testing
 
@@ -169,12 +223,36 @@ El proyecto valida la calidad de los datos con tres tipos de test:
 
 - **Genéricos** — `unique`, `not_null`, `accepted_range`, `relationships`
   declarados en los ficheros YAML.
-- **Custom** — tests genéricos creados para este dataset: `kda_valido`,
-  `fecha_no_futura`, `rango_porcentaje`, `fecha_fin_posterior_inicio`.
+- **Custom** — tests genéricos creados para este dataset, ubicados en
+  `macros/`: `kda_valido`, `fecha_no_futura`, `rango_porcentaje`,
+  `fecha_fin_posterior_inicio`.
 - **Singulares** — reglas de negocio en SQL: coherencia de reseñas,
   coherencia de porcentajes, métricas no negativas e integridad referencial.
 
-## Casos de uso en Power BI
+Los tests que detectan los datos sucios inyectados a propósito usan
+`severity: warn` — avisan pero no bloquean, porque es ruido conocido del
+origen, no un fallo del pipeline.
+
+## Decisiones de diseño
+
+| Área | Decisión | Razón |
+|------|----------|-------|
+| Arquitectura | Medallion Bronze/Silver/Gold | Separa responsabilidades, cada capa con una función |
+| Bronze | Todo VARCHAR | Ningún dato corrupto rompe la ingesta |
+| Silver | Staging 1:1 con el origen | Convención de dbt, la normalización va en intermediate |
+| Silver | Hash MD5 del email | Privacidad: anonimizar identificadores personales |
+| Gold | Modelo en estrella | Consultas rápidas desde Power BI |
+| Gold | Dimensiones conformadas | `dim_juego` y `dim_fecha` permiten cruzar análisis entre marts |
+| Gold | Tablas puente | Resuelven relaciones muchos a muchos (géneros, tecnologías) |
+| Gold | Claves surrogadas | Independencia del sistema de origen |
+| Performance | `fct_juego` y `fct_match_player` incrementales | Solo crecen — reconstruir 400k filas cada vez sería un desperdicio |
+| Performance | Silver como vistas, Gold como tablas | Vistas no ocupan espacio, tablas se consultan rápido |
+| SCD | Un único snapshot, sobre `GAMES_RAW` | Solo donde los datos cambian: las partidas son inmutables |
+| Entornos | `env_var('DBT_ENVIRONMENTS')` | dbt Cloud usa target `default`, no `dev` |
+| Orquestación | Jobs en manual, no programados | No consumir créditos innecesarios |
+| Calidad | Tests de datos sucios como WARN | No son bugs, es ruido conocido del origen |
+
+## Power BI — Casos de uso
 
 | Dashboard                     | Qué analiza                                          |
 |-------------------------------|------------------------------------------------------|
@@ -182,6 +260,9 @@ El proyecto valida la calidad de los datos con tres tipos de test:
 | Análisis de géneros           | Géneros dominantes y su valoración media             |
 | Estudios y desarrolladoras    | Editores y desarrolladores más exitosos              |
 | Rendimiento de tecnologías    | Engines de los juegos de éxito: popularidad vs calidad |
+
+El informe usa el fichero `Tema_Steam.json` con la paleta visual de la
+plataforma (azul oscuro `#1B2838`, azul claro `#66C0F4`, verde lima `#A4D007`).
 
 ## Convenciones de nomenclatura
 
@@ -192,10 +273,22 @@ El proyecto valida la calidad de los datos con tres tipos de test:
 | Dimensions   | `dim_`    | `dim_juego`, `dim_fecha`         |
 | Facts        | `fct_`    | `fct_juego`, `fct_match_player`  |
 | Puentes      | `puente_` | `puente_juego_genero`            |
+| Seeds        | `seed_`   | `seed_segmentos`                 |
 
-## Stack tecnológico
+## Notas operativas
 
-- **Snowflake** — data warehouse (Bronze / Silver / Gold, DEV y PRO)
-- **dbt Cloud** — transformación, testing, documentación y orquestación
-- **Power BI** — visualización y cuadros de mando
-- **Python** — generación de los datos simulados de partidas
+**Cuando cambies la lógica de un modelo incremental** (filtros, JOINs, lógica
+de negocio), reconstruye con `--full-refresh` para que el cambio se aplique
+a todas las filas, no solo a las nuevas:
+
+```bash
+dbt build --full-refresh
+```
+
+**Cuando cambies algo que afecta a un data mart**, reconstruye el mart entero
+(no solo el modelo modificado) para que la tabla de hechos y sus dimensiones
+queden coherentes entre sí:
+
+```bash
+dbt run --select catalogo_juegos --full-refresh
+```
