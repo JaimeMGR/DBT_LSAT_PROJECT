@@ -1,5 +1,9 @@
 # Steam Games — Proyecto dbt + Snowflake + Power BI
 
+## ENLACE A PRESENTACIÓN 
+
+https://prezi.com/p/f9fuudbfxwnh/#opensidebar=prezi-video-choose-mode
+
 ## Descripción
 
 Pipeline de datos completo end-to-end para analizar el catálogo de Steam
