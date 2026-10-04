@@ -120,8 +120,16 @@ steam_games/
 ├── generar_datos_multijugador.py  # Script Python para generar los datos
 ├── dbt_project.yml
 ├── packages.yml
-└── profiles.yml                   # ⚠ NO subir a Git (.gitignore)
+└── profiles.example.yml           # Plantilla; la configuración local usa profiles.yml
 ```
+
+## Configuración local
+
+El archivo `profiles.yml` no se versiona porque contiene la configuración local de conexión de dbt. Utiliza `profiles.example.yml` como plantilla y proporciona las credenciales de Snowflake mediante variables de entorno:
+
+- `SNOWFLAKE_ACCOUNT`
+- `SNOWFLAKE_USER`
+- `SNOWFLAKE_PASSWORD`
 
 ## Capas en detalle
 
@@ -208,7 +216,7 @@ dbt docs serve
 Tres jobs configurados en `Deploy → Jobs`:
 
 | Job                  | Trigger              | Comandos                                          |
-|----------------------|----------------------|---------------------------------------------------|
+|----------------------|---------|---------------------------------------------------|
 | `daily_full_refresh` | Manual               | `dbt deps → seed → run → test → snapshot`         |
 | `docs_generate`      | Manual               | `dbt docs generate`                               |
 | `ci_check`           | Pull Request         | `dbt build` con `state:modified+`                 |
